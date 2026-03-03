@@ -1,0 +1,23 @@
+{
+  "representations": [
+    {
+      "name": "TF-IDF (sparse)",
+      "dimensionality": 50000,
+      "vocab_size": 50000,
+      "sparsity_pct": 99.7197944,
+      "avg_nonzero_per_doc": 140.1028,
+      "dtype": "float32",
+      "storage_mb": 11.208224
+    },
+    {
+      "name": "Dense (specter2_base)",
+      "dimensionality": 768,
+      "vocab_size": "N/A (contextual)",
+      "sparsity_pct": 0.0,
+      "avg_nonzero_per_doc": 768.0,
+      "dtype": "float32",
+      "storage_mb": 61.44
+    }
+  ],
+  "n_documents": 20000
+}

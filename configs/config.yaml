@@ -1,0 +1,42 @@
+data_collection:
+  arxiv_base_url: "http://export.arxiv.org/api/query"
+  target_categories:
+    - "cs.CL" # Computation and Language (NLP)
+    - "cs.IR" # Information Retrieval
+    - "cs.AI" # Artificial Intelligence
+    - "cs.LG" # Machine Learning
+    - "cs.CV" # Computer Vision
+  date_range:
+    start: "2020-01-01"
+    end: "2026-12-31"
+  max_papers: 20000 # Target corpus size
+  batch_size: 200 # Smaller batches = fewer 500 errors
+  api_delay_seconds: 5 # Increased delay for API politeness
+  output_path: "data/arxiv_corpus.jsonl"
+
+preprocessing:
+  lowercase: true
+  remove_stopwords: true
+  remove_special_chars: true
+  min_token_length: 2
+  chunk_strategy: "sentence"
+  chunk_max_tokens: 128
+  chunk_overlap_tokens: 32
+
+embeddings:
+  dense_model: "allenai/specter2_base" # alternatives: allenai/scibert_scivocab_uncased
+  dense_batch_size: 64
+  dense_max_length: 512
+  tfidf_max_features: 50000
+  tfidf_ngram_range: [1, 2]
+
+visualization:
+  method: "umap" # "tsne" or "umap"
+  n_components: 2
+  perplexity: 30
+  n_neighbors: 15
+  min_dist: 0.1
+  sample_size: 5000 # Papers to visualize (for speed)
+  random_state: 42
+  figure_dpi: 150
+  output_dir: "outputs/figures"

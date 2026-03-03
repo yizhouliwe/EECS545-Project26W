@@ -1,0 +1,52 @@
+{
+  "total_papers": 20000,
+  "unique_categories": 131,
+  "year_range": [
+    2024,
+    2026
+  ],
+  "top_categories": [
+    [
+      "cs.AI",
+      11026
+    ],
+    [
+      "cs.CL",
+      7528
+    ],
+    [
+      "cs.LG",
+      7032
+    ],
+    [
+      "cs.IR",
+      6400
+    ],
+    [
+      "cs.CV",
+      2120
+    ],
+    [
+      "cs.HC",
+      660
+    ],
+    [
+      "cs.CY",
+      653
+    ],
+    [
+      "cs.CR",
+      647
+    ],
+    [
+      "stat.ML",
+      542
+    ],
+    [
+      "cs.SE",
+      488
+    ]
+  ],
+  "avg_abstract_words": 175.2177,
+  "median_abstract_words": 174
+}

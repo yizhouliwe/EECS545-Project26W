@@ -1,0 +1,47 @@
+[
+  {
+    "arxiv_id": "2603.02208",
+    "title": "Reasoning Core: A Scalable Procedural Data Generation Suite for Symbolic Pre-training and Post-Training",
+    "original_abstract": "Training on verifiable symbolic data is a promising way to expand the reasoning frontier of language models beyond what standard pre-training corpora provide. Yet existing procedural generators often rely on fixed puzzles or templates and do not deliver the distributional breadth needed at scale. We introduce Reasoning Core, a scalable suite that procedurally generates verifiable symbolic reasoning data across core formal domains: PDDL planning over randomized domains, first-order logic with equ",
+    "cleaned_text": "training verifiable symbolic data promising way expand reasoning frontier language models beyond standard pre-training corpora provide yet existing procedural generators often rely fixed puzzles templates deliver distributional breadth needed scale introduce reasoning core scalable suite procedurally generates verifiable symbolic reasoning data across core formal domains pddl planning randomized domains first-order logic equality context-free grammar parsing generation causal reasoning random ba",
+    "num_original_tokens": 174,
+    "num_cleaned_tokens": 125,
+    "num_chunks": 2
+  },
+  {
+    "arxiv_id": "2603.02203",
+    "title": "Tool Verification for Test-Time Reinforcement Learning",
+    "original_abstract": "Test-time reinforcement learning (TTRL) has emerged as a promising paradigm for self-evolving large reasoning models (LRMs), enabling online adaptation on unlabeled test inputs via self-induced rewards through majority voting. However, a spurious yet high-frequency unverified consensus can become a biased and reinforced reward signal, leading to incorrect mode collapse. We address this failure mode with T^3RL (Tool-Verification for Test-Time Reinforcement Learning), which introduces test-time to",
+    "cleaned_text": "test-time reinforcement learning ttrl emerged promising paradigm self-evolving large reasoning models lrms enabling online adaptation unlabeled test inputs via self-induced rewards majority voting however spurious yet high-frequency unverified consensus can become biased reinforced reward signal leading incorrect mode collapse address failure mode 3rl tool-verification test-time reinforcement learning introduces test-time tool verification reward estimation concretely verifier uses external tool",
+    "num_original_tokens": 142,
+    "num_cleaned_tokens": 106,
+    "num_chunks": 2
+  },
+  {
+    "arxiv_id": "2603.02176",
+    "title": "Organizing, Orchestrating, and Benchmarking Agent Skills at Ecosystem Scale",
+    "original_abstract": "The rapid proliferation of Claude agent skills has raised the central question of how to effectively leverage, manage, and scale the agent skill ecosystem. In this paper, we propose AgentSkillOS, the first principled framework for skill selection, orchestration, and ecosystem-level management. AgentSkillOS comprises two stages: (i) Manage Skills, which organizes skills into a capability tree via node-level recursive categorization for efficient discovery; and (ii) Solve Tasks, which retrieves, o",
+    "cleaned_text": "rapid proliferation claude agent skills raised central question effectively leverage manage scale agent skill ecosystem paper propose agentskillos first principled framework skill selection orchestration ecosystem-level management agentskillos comprises two stages manage skills organizes skills capability tree via node-level recursive categorization efficient discovery ii solve tasks retrieves orchestrates executes multiple skills dag-based pipelines evaluate agent's ability invoke skills constr",
+    "num_original_tokens": 185,
+    "num_cleaned_tokens": 136,
+    "num_chunks": 2
+  },
+  {
+    "arxiv_id": "2603.02153",
+    "title": "Scaling Retrieval Augmented Generation with RAG Fusion: Lessons from an Industry Deployment",
+    "original_abstract": "Retrieval-Augmented Generation (RAG) systems commonly adopt retrieval fusion techniques such as multi-query retrieval and reciprocal rank fusion (RRF) to increase document recall, under the assumption that higher recall leads to better answer quality. While these methods show consistent gains in isolated retrieval benchmarks, their effectiveness under realistic production constraints remains underexplored. In this work, we evaluate retrieval fusion in a production-style RAG pipeline operating ov",
+    "cleaned_text": "retrieval-augmented generation rag systems commonly adopt retrieval fusion techniques multi-query retrieval reciprocal rank fusion rrf increase document recall assumption higher recall leads better answer quality methods show consistent gains isolated retrieval benchmarks effectiveness realistic production constraints remains underexplored work evaluate retrieval fusion production-style rag pipeline operating enterprise knowledge base fixed retrieval depth re-ranking budgets latency constraints ",
+    "num_original_tokens": 195,
+    "num_cleaned_tokens": 141,
+    "num_chunks": 2
+  },
+  {
+    "arxiv_id": "2603.02150",
+    "title": "Zero- and Few-Shot Named-Entity Recognition: Case Study and Dataset in the Crime Domain (CrimeNER)",
+    "original_abstract": "The extraction of critical information from crime-related documents is a crucial task for law enforcement agencies. Named-Entity Recognition (NER) can perform this task in extracting information about the crime, the criminal, or law enforcement agencies involved. However, there is a considerable lack of adequately annotated data on general real-world crime scenarios. To address this issue, we present CrimeNER, a case-study of Crime-related zero- and Few-Shot NER, and a general Crime-related Name",
+    "cleaned_text": "extraction critical information crime-related documents crucial task law enforcement agencies named-entity recognition ner can perform task extracting information crime criminal law enforcement agencies involved however considerable lack adequately annotated data general real-world crime scenarios address issue present crimener case-study crime-related zero few-shot ner general crime-related named-entity recognition database crimenerdb consisting 1.5k annotated documents ner task extracted publi",
+    "num_original_tokens": 149,
+    "num_cleaned_tokens": 94,
+    "num_chunks": 2
+  }
+]
