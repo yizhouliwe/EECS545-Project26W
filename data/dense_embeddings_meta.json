@@ -1,0 +1,10 @@
+{
+  "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "simulated": false,
+  "embedding_dim": 384,
+  "n_documents": 20000,
+  "source_text": "title + abstract",
+  "encoder_backend": "sentence_transformers_or_simulated",
+  "document_adapter": null,
+  "query_adapter": null
+}

@@ -1,6 +1,6 @@
 {
   "total_papers": 20000,
-  "unique_categories": 131,
+  "unique_categories": 130,
   "year_range": [
     2024,
     2026
@@ -8,15 +8,15 @@
   "top_categories": [
     [
       "cs.AI",
-      11026
+      10973
     ],
     [
       "cs.CL",
-      7528
+      7540
     ],
     [
       "cs.LG",
-      7032
+      7146
     ],
     [
       "cs.IR",
@@ -24,29 +24,29 @@
     ],
     [
       "cs.CV",
-      2120
+      2123
     ],
     [
       "cs.HC",
-      660
-    ],
-    [
-      "cs.CY",
-      653
+      659
     ],
     [
       "cs.CR",
-      647
+      624
+    ],
+    [
+      "cs.CY",
+      609
     ],
     [
       "stat.ML",
-      542
+      561
     ],
     [
-      "cs.SE",
-      488
+      "cs.RO",
+      485
     ]
   ],
-  "avg_abstract_words": 175.2177,
+  "avg_abstract_words": 175.1894,
   "median_abstract_words": 174
 }

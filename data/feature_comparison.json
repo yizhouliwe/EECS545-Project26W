@@ -4,19 +4,19 @@
       "name": "TF-IDF (sparse)",
       "dimensionality": 50000,
       "vocab_size": 50000,
-      "sparsity_pct": 99.7197944,
-      "avg_nonzero_per_doc": 140.1028,
+      "sparsity_pct": 99.71996159999999,
+      "avg_nonzero_per_doc": 140.0192,
       "dtype": "float32",
-      "storage_mb": 11.208224
+      "storage_mb": 11.201536
     },
     {
-      "name": "Dense (specter2_base)",
-      "dimensionality": 768,
+      "name": "Dense (all-MiniLM-L6-v2)",
+      "dimensionality": 384,
       "vocab_size": "N/A (contextual)",
       "sparsity_pct": 0.0,
-      "avg_nonzero_per_doc": 768.0,
+      "avg_nonzero_per_doc": 384.0,
       "dtype": "float32",
-      "storage_mb": 61.44
+      "storage_mb": 30.72
     }
   ],
   "n_documents": 20000

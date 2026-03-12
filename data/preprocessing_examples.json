@@ -1,47 +1,47 @@
 [
   {
-    "arxiv_id": "2603.02208",
-    "title": "Reasoning Core: A Scalable Procedural Data Generation Suite for Symbolic Pre-training and Post-Training",
-    "original_abstract": "Training on verifiable symbolic data is a promising way to expand the reasoning frontier of language models beyond what standard pre-training corpora provide. Yet existing procedural generators often rely on fixed puzzles or templates and do not deliver the distributional breadth needed at scale. We introduce Reasoning Core, a scalable suite that procedurally generates verifiable symbolic reasoning data across core formal domains: PDDL planning over randomized domains, first-order logic with equ",
-    "cleaned_text": "training verifiable symbolic data promising way expand reasoning frontier language models beyond standard pre-training corpora provide yet existing procedural generators often rely fixed puzzles templates deliver distributional breadth needed scale introduce reasoning core scalable suite procedurally generates verifiable symbolic reasoning data across core formal domains pddl planning randomized domains first-order logic equality context-free grammar parsing generation causal reasoning random ba",
-    "num_original_tokens": 174,
-    "num_cleaned_tokens": 125,
+    "arxiv_id": "2603.10913",
+    "title": "LLM2Vec-Gen: Generative Embeddings from Large Language Models",
+    "original_abstract": "LLM-based text embedders typically encode the semantic content of their input. However, embedding tasks require mapping diverse inputs to similar outputs. Typically, this input-output is addressed by training embedding models with paired data using contrastive learning. In this work, we propose a novel self-supervised approach, LLM2Vec-Gen, which adopts a different paradigm: rather than encoding the input, we learn to represent the model's potential response. Specifically, we add trainable speci",
+    "cleaned_text": "llm-based text embedders typically encode semantic content input however embedding tasks require mapping diverse inputs similar outputs typically input-output addressed training embedding models paired data using contrastive learning work propose novel self-supervised approach llm2vec-gen adopts different paradigm rather encoding input learn represent model's potential response specifically add trainable special tokens llm's vocabulary append input optimize represent llm's response fixed-length ",
+    "num_original_tokens": 202,
+    "num_cleaned_tokens": 133,
     "num_chunks": 2
   },
   {
-    "arxiv_id": "2603.02203",
-    "title": "Tool Verification for Test-Time Reinforcement Learning",
-    "original_abstract": "Test-time reinforcement learning (TTRL) has emerged as a promising paradigm for self-evolving large reasoning models (LRMs), enabling online adaptation on unlabeled test inputs via self-induced rewards through majority voting. However, a spurious yet high-frequency unverified consensus can become a biased and reinforced reward signal, leading to incorrect mode collapse. We address this failure mode with T^3RL (Tool-Verification for Test-Time Reinforcement Learning), which introduces test-time to",
-    "cleaned_text": "test-time reinforcement learning ttrl emerged promising paradigm self-evolving large reasoning models lrms enabling online adaptation unlabeled test inputs via self-induced rewards majority voting however spurious yet high-frequency unverified consensus can become biased reinforced reward signal leading incorrect mode collapse address failure mode 3rl tool-verification test-time reinforcement learning introduces test-time tool verification reward estimation concretely verifier uses external tool",
-    "num_original_tokens": 142,
-    "num_cleaned_tokens": 106,
+    "arxiv_id": "2603.10910",
+    "title": "GLM-OCR Technical Report",
+    "original_abstract": "GLM-OCR is an efficient 0.9B-parameter compact multimodal model designed for real-world document understanding. It combines a 0.4B-parameter CogViT visual encoder with a 0.5B-parameter GLM language decoder, achieving a strong balance between computational efficiency and recognition performance. To address the inefficiency of standard autoregressive decoding in deterministic OCR tasks, GLM-OCR introduces a Multi-Token Prediction (MTP) mechanism that predicts multiple tokens per step, significantl",
+    "cleaned_text": "glm-ocr efficient 0.9b-parameter compact multimodal model designed real-world document understanding combines 0.4b-parameter cogvit visual encoder 0.5b-parameter glm language decoder achieving strong balance computational efficiency recognition performance address inefficiency standard autoregressive decoding deterministic ocr tasks glm-ocr introduces multi-token prediction mtp mechanism predicts multiple tokens per step significantly improving decoding throughput keeping memory overhead low sha",
+    "num_original_tokens": 140,
+    "num_cleaned_tokens": 104,
     "num_chunks": 2
   },
   {
-    "arxiv_id": "2603.02176",
-    "title": "Organizing, Orchestrating, and Benchmarking Agent Skills at Ecosystem Scale",
-    "original_abstract": "The rapid proliferation of Claude agent skills has raised the central question of how to effectively leverage, manage, and scale the agent skill ecosystem. In this paper, we propose AgentSkillOS, the first principled framework for skill selection, orchestration, and ecosystem-level management. AgentSkillOS comprises two stages: (i) Manage Skills, which organizes skills into a capability tree via node-level recursive categorization for efficient discovery; and (ii) Solve Tasks, which retrieves, o",
-    "cleaned_text": "rapid proliferation claude agent skills raised central question effectively leverage manage scale agent skill ecosystem paper propose agentskillos first principled framework skill selection orchestration ecosystem-level management agentskillos comprises two stages manage skills organizes skills capability tree via node-level recursive categorization efficient discovery ii solve tasks retrieves orchestrates executes multiple skills dag-based pipelines evaluate agent's ability invoke skills constr",
-    "num_original_tokens": 185,
-    "num_cleaned_tokens": 136,
+    "arxiv_id": "2603.10877",
+    "title": "From Images to Words: Efficient Cross-Modal Knowledge Distillation to Language Models from Black-box Teachers",
+    "original_abstract": "Knowledge distillation (KD) methods are pivotal in compressing large pre-trained language models into smaller models, ensuring computational efficiency without significantly dropping performance. Traditional KD techniques assume homogeneity in modalities between the teacher (source) and the student (target) models. On the other hand, existing multimodal knowledge distillation methods require modality-specific pre-training of the teacher model, which is computationally infeasible in most cases. I",
+    "cleaned_text": "knowledge distillation kd methods pivotal compressing large pre-trained language models smaller models ensuring computational efficiency without significantly dropping performance traditional kd techniques assume homogeneity modalities teacher source student target models hand existing multimodal knowledge distillation methods require modality-specific pre-training teacher model computationally infeasible cases paper introduce armada efficient cross-modal knowledge distillation framework designe",
+    "num_original_tokens": 207,
+    "num_cleaned_tokens": 156,
     "num_chunks": 2
   },
   {
-    "arxiv_id": "2603.02153",
-    "title": "Scaling Retrieval Augmented Generation with RAG Fusion: Lessons from an Industry Deployment",
-    "original_abstract": "Retrieval-Augmented Generation (RAG) systems commonly adopt retrieval fusion techniques such as multi-query retrieval and reciprocal rank fusion (RRF) to increase document recall, under the assumption that higher recall leads to better answer quality. While these methods show consistent gains in isolated retrieval benchmarks, their effectiveness under realistic production constraints remains underexplored. In this work, we evaluate retrieval fusion in a production-style RAG pipeline operating ov",
-    "cleaned_text": "retrieval-augmented generation rag systems commonly adopt retrieval fusion techniques multi-query retrieval reciprocal rank fusion rrf increase document recall assumption higher recall leads better answer quality methods show consistent gains isolated retrieval benchmarks effectiveness realistic production constraints remains underexplored work evaluate retrieval fusion production-style rag pipeline operating enterprise knowledge base fixed retrieval depth re-ranking budgets latency constraints ",
-    "num_original_tokens": 195,
-    "num_cleaned_tokens": 141,
-    "num_chunks": 2
+    "arxiv_id": "2603.10876",
+    "title": "An Extreme Multi-label Text Classification (XMTC) Library Dataset: What if we took \"Use of Practical AI in Digital Libraries\" seriously?",
+    "original_abstract": "Subject indexing is vital for discovery but hard to sustain at scale and across languages. We release a large bilingual (English/German) corpus of catalog records annotated with the Integrated Authority File (GND), plus a machine-actionable GND taxonomy. The resource enables ontology-aware multi-label classification, mapping text to authority terms, and agent-assisted cataloging with reproducible, authority-grounded evaluation. We provide a brief statistical profile and qualitative error analyse",
+    "cleaned_text": "subject indexing vital discovery hard sustain scale across languages release large bilingual english german corpus catalog records annotated integrated authority file gnd plus machine-actionable gnd taxonomy resource enables ontology-aware multi-label classification mapping text authority terms agent-assisted cataloging reproducible authority-grounded evaluation provide brief statistical profile qualitative error analyses three systems invite community assess accuracy usefulness transparency tow",
+    "num_original_tokens": 89,
+    "num_cleaned_tokens": 62,
+    "num_chunks": 1
   },
   {
-    "arxiv_id": "2603.02150",
-    "title": "Zero- and Few-Shot Named-Entity Recognition: Case Study and Dataset in the Crime Domain (CrimeNER)",
-    "original_abstract": "The extraction of critical information from crime-related documents is a crucial task for law enforcement agencies. Named-Entity Recognition (NER) can perform this task in extracting information about the crime, the criminal, or law enforcement agencies involved. However, there is a considerable lack of adequately annotated data on general real-world crime scenarios. To address this issue, we present CrimeNER, a case-study of Crime-related zero- and Few-Shot NER, and a general Crime-related Name",
-    "cleaned_text": "extraction critical information crime-related documents crucial task law enforcement agencies named-entity recognition ner can perform task extracting information crime criminal law enforcement agencies involved however considerable lack adequately annotated data general real-world crime scenarios address issue present crimener case-study crime-related zero few-shot ner general crime-related named-entity recognition database crimenerdb consisting 1.5k annotated documents ner task extracted publi",
-    "num_original_tokens": 149,
-    "num_cleaned_tokens": 94,
-    "num_chunks": 2
+    "arxiv_id": "2603.10861",
+    "title": "SiDiaC-v.2.0: Sinhala Diachronic Corpus Version 2.0",
+    "original_abstract": "SiDiaC-v.2.0 is the largest comprehensive Sinhala Diachronic Corpus to date, covering a period from 1800 CE to 1955 CE in terms of publication dates, and a historical span from the 5th to the 20th century CE in terms of written dates. The corpus consists of 244k words across 185 literary works that underwent thorough filtering, preprocessing, and copyright compliance checks, followed by extensive post-processing. Additionally, a subset of 59 documents totalling 70k words was annotated based on t",
+    "cleaned_text": "sidiac-v.2.0 largest comprehensive sinhala diachronic corpus date covering period 1800 ce 1955 ce terms publication dates historical span 5th 20th century ce terms written dates corpus consists 244k words across 185 literary works underwent thorough filtering preprocessing copyright compliance checks followed extensive post-processing additionally subset 59 documents totalling 70k words annotated based written dates texts national library sri lanka selected sidiac-v.1.0 non-filtered list digitis",
+    "num_original_tokens": 236,
+    "num_cleaned_tokens": 155,
+    "num_chunks": 3
   }
 ]
