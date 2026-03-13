@@ -166,3 +166,28 @@ For the report, document:
 3. The hyperparameters used: embedding model, top-K, dense candidate pool, hybrid weight `alpha`.
 4. A results table comparing `TF-IDF`, `Dense`, and `Hybrid`.
 5. A comparison plot across the reported metrics.
+
+
+## Stage 3 — Interactive Feedback & Retrieval-Augmented Generation (RAG)
+### Stage 3 Workflow
+
+1.  **Initial Retrieval**: Performs dense retrieval using an L2-normalized query vector.
+2.  **User/Pseudo Feedback**: Collects relevance labels. Supports **Pseudo-Relevance Feedback (PRF)**, which automatically assumes the Top-1 result is relevant to enable testing without manual labels.
+3.  **Query Refinement**: Updates the query vector using the **Rocchio Algorithm**, shifting the search embedding toward the relevant document cluster and away from non-relevant ones.
+4.  **Grounded Generation**: Feeds the refined Top-K abstracts into a Large Language Model (**UM GPT-oss-120B**) to produce a research summary with precise inline citations.
+
+### Source Files Added for Stage 3
+
+| File | Description |
+| :--- | :--- |
+| `src/retrieval_extended.py` | Extends the Part 2 retriever to support vector-based searching and enforces 384-dim (MiniLM) alignment with the Part 1 index. |
+| `src/feedback_logic.py` | Implements the core Rocchio algorithm: $Q_{new} = \alpha Q_{old} + \beta \mu(D_{pos}) - \gamma \mu(D_{neg})$. |
+| `src/qa_engine.py` | Orchestrates the RAG pipeline, including prompt engineering for scientific grounding and citation parsing. |
+| `run_part3.py` | The main orchestrator for the interactive loop, feedback processing, and grounded QA evaluation. |
+
+### Step-by-Step Usage
+
+Run the full interactive pipeline (e.g., 1 round of feedback):
+
+```bash
+python run_part3.py --queries data/queries_val.jsonl --rounds 1
