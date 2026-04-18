@@ -1,11 +1,11 @@
 {
   "total_papers": 20000,
-  "total_chunks": 40477,
-  "avg_chunks_per_paper": 2.02385,
-  "avg_original_tokens": 175.2177,
-  "avg_cleaned_tokens": 122.0634,
-  "token_reduction_pct": 30.336147546737568,
-  "avg_chunk_tokens": 96.097339229686,
-  "min_chunk_tokens": 5,
+  "total_chunks": 40460,
+  "avg_chunks_per_paper": 2.023,
+  "avg_original_tokens": 175.1894,
+  "avg_cleaned_tokens": 122.16995,
+  "token_reduction_pct": 30.264074196269863,
+  "avg_chunk_tokens": 96.09305486900642,
+  "min_chunk_tokens": 4,
   "max_chunk_tokens": 245
 }

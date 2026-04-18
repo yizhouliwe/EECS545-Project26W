@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import yaml
 
+from src.dense_encoder import DenseEncoder
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -41,16 +43,17 @@ def generate_dense_embeddings(
     device: Optional[str] = None,
 ) -> np.ndarray:
     try:
-        from sentence_transformers import SentenceTransformer
         logger.info(f"Loading model: {model_name}")
-        model = SentenceTransformer(model_name, device=device)
+        encoder = DenseEncoder(
+            model_name=model_name,
+            max_length=max_length,
+            device=device,
+        )
         logger.info(f"Generating embeddings for {len(texts)} texts (batch_size={batch_size})")
-        embeddings = model.encode(
+        embeddings = encoder.encode_documents(
             texts,
             batch_size=batch_size,
             show_progress_bar=True,
-            convert_to_numpy=True,
-            normalize_embeddings=True,
         )
         logger.info(f"Dense embeddings shape: {embeddings.shape}")
         return embeddings
@@ -346,6 +349,7 @@ def main():
     emb_cfg = cfg["embeddings"]
     vis_cfg = cfg["visualization"]
     data_dir = Path(cfg["data_collection"]["output_path"]).parent
+    data_dir.mkdir(parents=True, exist_ok=True)
 
     cleaned_path = data_dir / "arxiv_corpus_cleaned.jsonl"
     logger.info(f"Loading cleaned corpus from {cleaned_path}")
@@ -371,6 +375,7 @@ def main():
     logger.info("TF-IDF artifacts saved.")
 
     if not args.skip_dense:
+        simulated_mode = bool(args.simulated)
         if args.simulated:
             dense_embeddings = generate_simulated_embeddings(
                 raw_texts, emb_cfg["dense_model"], dim=768
@@ -385,6 +390,26 @@ def main():
 
         np.save(str(data_dir / "dense_embeddings.npy"), dense_embeddings)
         logger.info("Dense embeddings saved.")
+
+        dense_meta = {
+            "model_name": emb_cfg["dense_model"],
+            "simulated": simulated_mode,
+            "embedding_dim": int(dense_embeddings.shape[1]),
+            "n_documents": int(dense_embeddings.shape[0]),
+            "source_text": "title + abstract",
+            "encoder_backend": (
+                "specter2_adapters"
+                if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode
+                else "hf_mean_pooling"
+                if emb_cfg["dense_model"] == "allenai/scibert_scivocab_uncased" and not simulated_mode
+                else "sentence_transformers_or_simulated"
+            ),
+            "document_adapter": "allenai/specter2" if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode else None,
+            "query_adapter": "allenai/specter2_adhoc_query" if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode else None,
+        }
+        with open(data_dir / "dense_embeddings_meta.json", "w") as f:
+            json.dump(dense_meta, f, indent=2)
+        logger.info("Dense embedding metadata saved.")
 
         build_faiss_index(dense_embeddings, str(data_dir / "faiss_index.bin"))
 
