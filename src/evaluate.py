@@ -111,10 +111,11 @@ def main():
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument("--alpha", type=float, default=0.5)
     parser.add_argument("--dense-candidates", type=int, default=100)
+    parser.add_argument("--dense-model", default=None)
     args = parser.parse_args()
 
     query_rows = load_jsonl(Path(args.queries))
-    retriever = PaperRetriever(config_path=args.config)
+    retriever = PaperRetriever(config_path=args.config, dense_model_name=args.dense_model)
 
     print(f"Evaluating {len(query_rows)} labeled queries from {args.queries}\n")
     for mode in ["tfidf", "dense", "hybrid"]:

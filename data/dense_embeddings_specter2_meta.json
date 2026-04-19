@@ -1,0 +1,12 @@
+{
+  "model_name": "allenai/specter2_base",
+  "simulated": false,
+  "embedding_dim": 768,
+  "n_documents": 20000,
+  "source_text": "title [SEP] abstract",
+  "created_at_utc": "2026-04-19T20:01:34.214736+00:00",
+  "artifact_file": "dense_embeddings_specter2.npy",
+  "encoder_backend": "specter2_adapters",
+  "document_adapter": "allenai/specter2",
+  "query_adapter": "allenai/specter2_adhoc_query"
+}

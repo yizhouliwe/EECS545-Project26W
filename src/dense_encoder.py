@@ -151,6 +151,9 @@ class DenseEncoder:
             set_active=True,
             local_files_only=self.local_files_only,
         )
+        if self.device:
+            # adapters are loaded after the base model is moved, so keep all weights on the same device.
+            self.model.to(self.device)
         self._loaded_adapters.add(adapter_name)
 
     def _encode_with_adapter(
@@ -163,10 +166,18 @@ class DenseEncoder:
         self._ensure_adapter(adapter_name)
 
         batches = []
-        for start in range(0, len(texts), batch_size):
+        batch_starts = range(0, len(texts), batch_size)
+        if show_progress_bar:
+            try:
+                from tqdm.auto import tqdm
+                batch_starts = tqdm(batch_starts, total=(len(texts) + batch_size - 1) // batch_size)
+            except ImportError:
+                pass
+
+        for start in batch_starts:
             text_batch = texts[start:start + batch_size]
             if start == 0:
-                logger.info("Encoding first batch with HF mean pooling backend.")
+                logger.info("Encoding first batch with adapter-backed transformer backend.")
             inputs = self.tokenizer(
                 text_batch,
                 padding=True,

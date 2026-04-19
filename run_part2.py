@@ -26,6 +26,7 @@ def main():
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument("--alpha", type=float, default=0.5)
     parser.add_argument("--dense-candidates", type=int, default=100)
+    parser.add_argument("--dense-model", default=None)
     args = parser.parse_args()
 
     if args.bootstrap_queries:
@@ -33,19 +34,22 @@ def main():
     if args.split_queries:
         run_step("Split labeled queries into train/val/test", "src.split_queries")
     if args.evaluate:
+        eval_args = [
+            "--queries",
+            args.queries,
+            "--top-k",
+            str(args.top_k),
+            "--alpha",
+            str(args.alpha),
+            "--dense-candidates",
+            str(args.dense_candidates),
+        ]
+        if args.dense_model:
+            eval_args.extend(["--dense-model", args.dense_model])
         run_step(
             "Evaluate TF-IDF, dense, and hybrid retrieval",
             "src.evaluate",
-            [
-                "--queries",
-                args.queries,
-                "--top-k",
-                str(args.top_k),
-                "--alpha",
-                str(args.alpha),
-                "--dense-candidates",
-                str(args.dense_candidates),
-            ],
+            eval_args,
         )
 
     if not any([args.bootstrap_queries, args.split_queries, args.evaluate]):

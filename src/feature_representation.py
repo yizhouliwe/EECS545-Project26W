@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime, timezone
 import json
 import logging
 import pickle
@@ -9,6 +10,11 @@ import numpy as np
 import yaml
 
 from src.dense_encoder import DenseEncoder
+from src.part2_utils import (
+    dense_embedding_filename,
+    dense_embedding_metadata_filename,
+    dense_faiss_index_filename,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -89,6 +95,13 @@ def generate_simulated_embeddings(
     embeddings = normalize(embeddings, norm="l2")
     logger.info(f"Simulated embeddings shape: {embeddings.shape}")
     return embeddings.astype(np.float32)
+
+
+def build_dense_input_texts(papers: List[dict], model_name: str) -> List[str]:
+    if model_name == "allenai/specter2_base":
+        # AllenAI's documented SPECTER2 retrieval recipe separates title and abstract with BERT's [SEP] token.
+        return [f"{p['title']} [SEP] {p['abstract']}" for p in papers]
+    return [f"{p['title']}. {p['abstract']}" for p in papers]
 
 def feature_comparison_table(
     tfidf_vectorizer,
@@ -359,7 +372,7 @@ def main():
             papers.append(json.loads(line))
 
     cleaned_texts = [p["cleaned_text"] for p in papers]
-    raw_texts = [f"{p['title']}. {p['abstract']}" for p in papers]
+    raw_texts = build_dense_input_texts(papers, emb_cfg["dense_model"])
     categories = [p["categories"] for p in papers]
 
     vectorizer, tfidf_matrix = build_tfidf_features(
@@ -388,15 +401,21 @@ def main():
                 max_length=emb_cfg["dense_max_length"],
             )
 
-        np.save(str(data_dir / "dense_embeddings.npy"), dense_embeddings)
-        logger.info("Dense embeddings saved.")
+        embeddings_path = data_dir / dense_embedding_filename(emb_cfg["dense_model"])
+        metadata_path = data_dir / dense_embedding_metadata_filename(emb_cfg["dense_model"])
+        faiss_path = data_dir / dense_faiss_index_filename(emb_cfg["dense_model"])
+
+        np.save(str(embeddings_path), dense_embeddings)
+        logger.info("Dense embeddings saved to %s.", embeddings_path)
 
         dense_meta = {
             "model_name": emb_cfg["dense_model"],
             "simulated": simulated_mode,
             "embedding_dim": int(dense_embeddings.shape[1]),
             "n_documents": int(dense_embeddings.shape[0]),
-            "source_text": "title + abstract",
+            "source_text": "title [SEP] abstract" if emb_cfg["dense_model"] == "allenai/specter2_base" else "title + abstract",
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+            "artifact_file": embeddings_path.name,
             "encoder_backend": (
                 "specter2_adapters"
                 if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode
@@ -407,11 +426,11 @@ def main():
             "document_adapter": "allenai/specter2" if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode else None,
             "query_adapter": "allenai/specter2_adhoc_query" if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode else None,
         }
-        with open(data_dir / "dense_embeddings_meta.json", "w") as f:
+        with open(metadata_path, "w") as f:
             json.dump(dense_meta, f, indent=2)
-        logger.info("Dense embedding metadata saved.")
+        logger.info("Dense embedding metadata saved to %s.", metadata_path)
 
-        build_faiss_index(dense_embeddings, str(data_dir / "faiss_index.bin"))
+        build_faiss_index(dense_embeddings, str(faiss_path))
 
         table = feature_comparison_table(
             vectorizer, tfidf_matrix, dense_embeddings, emb_cfg["dense_model"]
