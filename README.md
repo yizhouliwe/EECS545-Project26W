@@ -129,7 +129,10 @@ python3 -m src.evaluate --queries data/queries_test.jsonl --top-k 5 --alpha 0.5 
 ### Notes on dense retrieval
 
 - Dense retrieval expects the stored paper embeddings and the query encoder to be consistent.
-- If `data/dense_embeddings_meta.json` is missing, dense and hybrid retrieval will be skipped with a warning.
+- Dense artifacts are now model-specific:
+  - `allenai/specter2_base` -> `data/dense_embeddings_specter2.npy`, `data/dense_embeddings_specter2_meta.json`
+  - `sentence-transformers/all-MiniLM-L6-v2` -> legacy `data/dense_embeddings.npy`, `data/dense_embeddings_meta.json`
+- Use `--dense-model` with `src.retrieval`, `src.evaluate`, or `run_part2.py` to switch between SPECTER2 and MiniLM for ablations.
 - To regenerate dense artifacts and metadata, rerun Part 1:
 
 ```bash
@@ -147,15 +150,17 @@ python3 run_part1.py
 
 ### Current validation results
 
-Using the current validation split (`data/queries_val.jsonl`) with `top-k=10`, the initial paper-level results are:
+Using the current validation split (`data/queries_val.jsonl`) with `top-k=10` and `dense-candidates=100`, the current paper-level results are:
 
 | Method | Precision@10 | Recall@10 | NDCG@10 | MAP |
 | ------ | ------------ | --------- | ------- | --- |
-| TF-IDF | 0.5500 | 1.0000 | 0.8554 | 0.7523 |
-| Dense | 0.0500 | 0.1250 | 0.0588 | 0.0139 |
-| Hybrid | 0.2000 | 0.4464 | 0.4248 | 0.3115 |
+| TF-IDF | 0.4421 | 0.1957 | 0.4452 | 0.1131 |
+| Dense (MiniLM) | 0.5105 | 0.2334 | 0.5275 | 0.1498 |
+| Hybrid (MiniLM) | 0.5263 | 0.2441 | 0.5515 | 0.1642 |
+| Dense (SPECTER2) | 0.3474 | 0.1739 | 0.3781 | 0.1069 |
+| Hybrid (SPECTER2) | 0.4526 | 0.2222 | 0.5012 | 0.1538 |
 
-At this stage, **TF-IDF is the strongest baseline** on the validation set, **hybrid retrieval improves over dense-only retrieval**, and **dense retrieval remains the weakest of the three approaches** on this small manually labeled benchmark.
+On the current 19-query validation split, **MiniLM remains the strongest dense encoder in this repo**, while **SPECTER2 is now fully supported as an ablation-ready scientific-domain alternative** with separate artifacts and metadata. Hybrid reranking still outperforms dense-only retrieval for both encoders.
 
 ### Reporting guidance for Part 2
 
@@ -180,7 +185,7 @@ For the report, document:
 
 | File | Description |
 | :--- | :--- |
-| `src/retrieval_extended.py` | Extends the Part 2 retriever to support vector-based searching and enforces 384-dim (MiniLM) alignment with the Part 1 index. |
+| `src/retrieval_extended.py` | Extends the Part 2 retriever with vector-based search and model-specific dense artifact loading (SPECTER2 by default). |
 | `src/feedback_logic.py` | Implements the core Rocchio algorithm: $Q_{new} = \alpha Q_{old} + \beta \mu(D_{pos}) - \gamma \mu(D_{neg})$. |
 | `src/qa_engine.py` | Orchestrates the RAG pipeline, including prompt engineering for scientific grounding and citation parsing. |
 | `run_part3.py` | The main orchestrator for the interactive loop, feedback processing, and grounded QA evaluation. |

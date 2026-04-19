@@ -7,6 +7,8 @@ import numpy as np
 from src.dense_encoder import DenseEncoder
 from src.part2_utils import (
     build_paper_lookup,
+    dense_embedding_filename,
+    dense_embedding_metadata_filename,
     load_config,
     load_dense_embeddings,
     load_dense_embedding_metadata,
@@ -17,7 +19,11 @@ from src.part2_utils import (
 
 
 class PaperRetriever:
-    def __init__(self, config_path: str = "configs/config.yaml"):
+    def __init__(
+        self,
+        config_path: str = "configs/config.yaml",
+        dense_model_name: Optional[str] = None,
+    ):
         cfg = load_config(config_path)
         data_dir = Path(cfg["data_collection"]["output_path"]).parent
         corpus_path = data_dir / "arxiv_corpus_cleaned.jsonl"
@@ -28,9 +34,11 @@ class PaperRetriever:
         self.paper_lookup = build_paper_lookup(self.papers)
         self.paper_ids = [paper["paper_id"] for paper in self.papers]
         self.vectorizer, self.tfidf_matrix = load_tfidf_artifacts(data_dir)
-        self.dense_embeddings = load_dense_embeddings(data_dir)
-        self.dense_metadata = load_dense_embedding_metadata(data_dir)
-        self.dense_model_name = cfg["embeddings"]["dense_model"]
+        self.dense_model_name = dense_model_name or cfg["embeddings"]["dense_model"]
+        self.dense_embeddings_path = data_dir / dense_embedding_filename(self.dense_model_name)
+        self.dense_metadata_path = data_dir / dense_embedding_metadata_filename(self.dense_model_name)
+        self.dense_embeddings = load_dense_embeddings(data_dir, self.dense_model_name)
+        self.dense_metadata = load_dense_embedding_metadata(data_dir, self.dense_model_name)
         self._dense_encoder = None
 
     def _load_dense_encoder(self):
@@ -49,8 +57,8 @@ class PaperRetriever:
     def _validate_dense_setup(self):
         if self.dense_metadata is None:
             raise RuntimeError(
-                "Missing data/dense_embeddings_meta.json. "
-                "Regenerate dense embeddings with `python3 run_part1.py` so retrieval can verify compatibility."
+                f"Missing {self.dense_metadata_path}. Regenerate dense embeddings with "
+                "`python3 run_part1.py` so retrieval can verify compatibility."
             )
         if self.dense_metadata.get("simulated"):
             raise RuntimeError(
@@ -132,9 +140,14 @@ def main():
     parser.add_argument("--alpha", type=float, default=0.5)
     parser.add_argument("--dense-candidates", type=int, default=100)
     parser.add_argument("--config", default="configs/config.yaml")
+    parser.add_argument(
+        "--dense-model",
+        default=None,
+        help="Override the dense model/artifact used for query encoding and retrieval.",
+    )
     args = parser.parse_args()
 
-    retriever = PaperRetriever(config_path=args.config)
+    retriever = PaperRetriever(config_path=args.config, dense_model_name=args.dense_model)
     if args.mode == "tfidf":
         results = retriever.retrieve_tfidf(args.query, k=args.k)
     elif args.mode == "dense":
