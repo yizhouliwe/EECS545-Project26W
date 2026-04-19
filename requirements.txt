@@ -1,0 +1,10 @@
+numpy
+scipy
+scikit-learn
+sentence-transformers
+transformers
+torch
+openai
+pyyaml
+umap-learn
+faiss-cpu
