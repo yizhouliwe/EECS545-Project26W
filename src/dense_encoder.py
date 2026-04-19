@@ -2,11 +2,27 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+
+def _repo_cached(repo_id: str, required_file_groups: Sequence[Sequence[str]]) -> bool:
+    try:
+        from huggingface_hub import try_to_load_from_cache
+    except ImportError:
+        return False
+
+    for group in required_file_groups:
+        if not any(
+            isinstance(cached_path := try_to_load_from_cache(repo_id, filename), str)
+            and os.path.exists(cached_path)
+            for filename in group
+        ):
+            return False
+    return True
 
 
 def _normalize(embeddings: np.ndarray) -> np.ndarray:
@@ -61,23 +77,31 @@ class DenseEncoder:
 
             self._torch = torch
             os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+            model_local_only = self.local_files_only or _repo_cached(
+                self.model_name,
+                [
+                    ["config.json"],
+                    ["tokenizer_config.json"],
+                    ["model.safetensors", "pytorch_model.bin"],
+                ],
+            )
             logger.info(
                 "Loading SPECTER2 base tokenizer from %s (local_files_only=%s)",
                 self.model_name,
-                self.local_files_only,
+                model_local_only,
             )
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
-                local_files_only=self.local_files_only,
+                local_files_only=model_local_only,
             )
             logger.info(
                 "Loading SPECTER2 base model from %s (local_files_only=%s)",
                 self.model_name,
-                self.local_files_only,
+                model_local_only,
             )
             self.model = AutoAdapterModel.from_pretrained(
                 self.model_name,
-                local_files_only=self.local_files_only,
+                local_files_only=model_local_only,
             )
             if self.device:
                 self.model.to(self.device)
@@ -93,23 +117,31 @@ class DenseEncoder:
 
             self._torch = torch
             os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+            model_local_only = self.local_files_only or _repo_cached(
+                self.model_name,
+                [
+                    ["config.json"],
+                    ["tokenizer_config.json"],
+                    ["model.safetensors", "pytorch_model.bin"],
+                ],
+            )
             logger.info(
                 "Loading HF tokenizer from %s (local_files_only=%s)",
                 self.model_name,
-                self.local_files_only,
+                model_local_only,
             )
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
-                local_files_only=self.local_files_only,
+                local_files_only=model_local_only,
             )
             logger.info(
                 "Tokenizer loaded. Loading HF model from %s (local_files_only=%s)",
                 self.model_name,
-                self.local_files_only,
+                model_local_only,
             )
             self._transformers_model = AutoModel.from_pretrained(
                 self.model_name,
-                local_files_only=self.local_files_only,
+                local_files_only=model_local_only,
                 low_cpu_mem_usage=True,
             )
             logger.info("HF model loaded.")
@@ -139,17 +171,24 @@ class DenseEncoder:
         if adapter_name in self._loaded_adapters:
             self.model.set_active_adapters(adapter_name)
             return
+        adapter_local_only = self.local_files_only or _repo_cached(
+            adapter_name,
+            [
+                ["adapter_config.json"],
+                ["adapter_model.safetensors", "pytorch_adapter.bin"],
+            ],
+        )
         logger.info(
             "Loading adapter %s (local_files_only=%s)",
             adapter_name,
-            self.local_files_only,
+            adapter_local_only,
         )
         self.model.load_adapter(
             adapter_name,
             source="hf",
             load_as=adapter_name,
             set_active=True,
-            local_files_only=self.local_files_only,
+            local_files_only=adapter_local_only,
         )
         if self.device:
             # adapters are loaded after the base model is moved, so keep all weights on the same device.

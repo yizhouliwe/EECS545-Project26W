@@ -176,23 +176,57 @@ For the report, document:
 ## Stage 3 — Interactive Feedback & Retrieval-Augmented Generation (RAG)
 ### Stage 3 Workflow
 
-1.  **Initial Retrieval**: Performs dense retrieval using an L2-normalized query vector.
-2.  **User/Pseudo Feedback**: Collects relevance labels. Supports **Pseudo-Relevance Feedback (PRF)**, which automatically assumes the Top-1 result is relevant to enable testing without manual labels.
-3.  **Query Refinement**: Updates the query vector using the **Rocchio Algorithm**, shifting the search embedding toward the relevant document cluster and away from non-relevant ones.
-4.  **Grounded Generation**: Feeds the refined Top-K abstracts into a Large Language Model (**UM GPT-oss-120B**) to produce a research summary with precise inline citations.
+1. **Initial Retrieval**: Performs dense retrieval using an L2-normalized query vector from the configured dense encoder.
+2. **User/Pseudo Feedback**: Collects explicit relevance labels when available. Supports **Pseudo-Relevance Feedback (PRF)**, which automatically treats the top-1 result as relevant for fast testing.
+3. **Query Refinement**: Supports three refinement modes:
+   - `rocchio`: standard vector-space relevance feedback.
+   - `llm`: asks a UM-hosted LLM to rewrite the query and return optional facet weights from feedback text.
+   - `combined`: applies Rocchio first, then lets the LLM rewrite the updated search intent before re-encoding.
+4. **Grounded Generation**: Feeds the final Top-K abstracts into a UM-hosted chat model to produce a grounded answer with inline citations.
 
 ### Source Files Added for Stage 3
 
 | File | Description |
 | :--- | :--- |
 | `src/retrieval_extended.py` | Extends the Part 2 retriever with vector-based search and model-specific dense artifact loading (SPECTER2 by default). |
-| `src/feedback_logic.py` | Implements the core Rocchio algorithm: $Q_{new} = \alpha Q_{old} + \beta \mu(D_{pos}) - \gamma \mu(D_{neg})$. |
-| `src/qa_engine.py` | Orchestrates the RAG pipeline, including prompt engineering for scientific grounding and citation parsing. |
-| `run_part3.py` | The main orchestrator for the interactive loop, feedback processing, and grounded QA evaluation. |
+| `src/feedback_logic.py` | Implements Rocchio updates and approximate facet-weight scaling on dense query vectors. |
+| `src/llm_refinement.py` | Calls the UM-hosted OpenAI-compatible endpoint to rewrite queries and return facet weights from feedback text. |
+| `src/qa_engine.py` | Orchestrates grounded answer generation with inline citations over retrieved abstracts. |
+| `run_part3.py` | Main entrypoint for interactive retrieval, relevance feedback, optional PRF, and grounded QA. |
 
 ### Step-by-Step Usage
 
-Run the full interactive pipeline (e.g., 1 round of feedback):
+Run one round of Rocchio feedback with grounded answer generation:
 
 ```bash
-python run_part3.py --queries data/queries_val.jsonl --rounds 1
+python run_part3.py --queries data/queries_val.jsonl --rounds 1 --feedback-method rocchio
+```
+
+Run one round of LLM-based reflective refinement with pseudo-feedback and no QA call:
+
+```bash
+python run_part3.py --queries data/queries_val.jsonl --rounds 1 --feedback-method llm --use_pseudo --skip-rag
+```
+
+Run the combined method on the SPECTER2 artifacts:
+
+```bash
+python run_part3.py --queries data/queries_val.jsonl --rounds 1 --feedback-method combined --dense-model allenai/specter2_base
+```
+
+Useful flags:
+
+- `--feedback-method {rocchio,llm,combined}` selects the refinement strategy.
+- `--rounds {0,1,2}` controls how many refinement rounds to run.
+- `--use_pseudo` enables pseudo-relevance feedback when no explicit positives are available.
+- `--skip-rag` runs retrieval/refinement only and skips the final answer-generation call.
+- `--max-queries N` limits evaluation to the first `N` queries for quick smoke tests.
+- `--dense-model MODEL_NAME` switches between dense artifact sets, including `sentence-transformers/all-MiniLM-L6-v2` and `allenai/specter2_base`.
+
+For the UM-hosted LLM endpoints, set:
+
+```bash
+export UM_GPTOSS_BASE_URL=http://<host>:8000/v1
+export UM_GPTOSS_API_KEY=<api_key>
+export UM_GPTOSS_MODEL=<model_name>
+```
