@@ -4,7 +4,7 @@ from typing import Sequence
 
 import numpy as np
 
-from src.utils import l2_normalize
+from src.utils.helpers import l2_normalize
 
 
 def apply_rocchio(

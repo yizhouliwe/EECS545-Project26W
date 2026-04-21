@@ -5,8 +5,8 @@ from typing import List, Optional
 
 import numpy as np
 
-from src.dense_encoder import DenseEncoder
-from src.utils import (
+from src.features.dense_encoder import DenseEncoder
+from src.utils.helpers import (
     build_paper_lookup,
     dense_embedding_filename,
     dense_embedding_metadata_filename,

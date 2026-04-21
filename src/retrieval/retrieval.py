@@ -4,8 +4,8 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from src.dense_encoder import DenseEncoder
-from src.utils import (
+from src.features.dense_encoder import DenseEncoder
+from src.utils.helpers import (
     build_paper_lookup,
     dense_embedding_filename,
     dense_embedding_metadata_filename,
@@ -68,7 +68,7 @@ class PaperRetriever:
         if self.dense_metadata is None:
             raise RuntimeError(
                 f"Missing {self.dense_metadata_path}. Regenerate dense embeddings with "
-                "`python3 run_part1.py` so retrieval can verify compatibility."
+                "`python3 run_data_pipeline.py` so retrieval can verify compatibility."
             )
         if self.dense_metadata.get("simulated"):
             raise RuntimeError(

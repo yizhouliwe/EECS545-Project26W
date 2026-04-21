@@ -11,8 +11,8 @@ from pathlib import Path
 
 from openai import OpenAI
 
-from src.utils import load_config, load_papers
-from src.retrieval import PaperRetriever
+from src.utils.helpers import load_config, load_papers
+from src.retrieval.retrieval import PaperRetriever
 
 
 UM_CLIENT = OpenAI(

@@ -2,7 +2,7 @@ import argparse
 import random
 from pathlib import Path
 
-from src.utils import load_jsonl, save_jsonl
+from src.utils.helpers import load_jsonl, save_jsonl
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     input_path = Path(args.input)
     if not input_path.exists():
         print(f"Query file not found: {input_path}")
-        print("Create it first with: python3 run_part2.py --bootstrap-queries")
+        print("Create it first with: python3 run_retrieval.py --bootstrap-queries")
         return
 
     rows = load_jsonl(input_path)

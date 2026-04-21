@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from src.utils import load_config, load_papers, save_jsonl
+from src.utils.helpers import load_config, load_papers, save_jsonl
 
 
 TOPIC_TEMPLATES = [

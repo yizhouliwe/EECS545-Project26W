@@ -1,7 +1,7 @@
 import argparse
 import textwrap
 
-from src.retrieval import PaperRetriever
+from src.retrieval.retrieval import PaperRetriever
 
 
 def main():

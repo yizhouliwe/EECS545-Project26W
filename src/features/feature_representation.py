@@ -9,8 +9,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import yaml
 
-from src.dense_encoder import DenseEncoder
-from src.utils import (
+from src.features.dense_encoder import DenseEncoder
+from src.utils.helpers import (
     dense_embedding_filename,
     dense_embedding_metadata_filename,
     dense_faiss_index_filename,

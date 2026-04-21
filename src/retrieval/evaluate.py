@@ -4,8 +4,8 @@ from typing import Dict, List, Sequence
 
 import numpy as np
 
-from src.utils import load_jsonl
-from src.retrieval import PaperRetriever
+from src.utils.helpers import load_jsonl
+from src.retrieval.retrieval import PaperRetriever
 
 
 def get_relevant_ids(query: dict) -> List[str]:
