@@ -11,8 +11,8 @@ This stage builds the full document corpus and its feature representations that 
 Run the whole pipeline with:
 
 ```bash
-python run_part1.py          # full pipeline (arXiv API + GPU)
-python run_part1.py --demo   # synthetic corpus, simulated embeddings
+python run_data_pipeline.py          # full pipeline (arXiv API + GPU)
+python run_data_pipeline.py --demo   # synthetic corpus, simulated embeddings
 ```
 
 ---
@@ -21,18 +21,19 @@ python run_part1.py --demo   # synthetic corpus, simulated embeddings
 
 ### Source files (`src/`)
 
-| File                            | Description                                                                                                                           |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/collect_data.py`           | Queries the arXiv Atom API in batches and serializes raw paper metadata to `data/arxiv_corpus.jsonl`.                                 |
-| `src/preprocess.py`             | Cleans and tokenizes abstracts (LaTeX removal, stopwords, Unicode normalization) and produces the cleaned corpus and sentence chunks. |
-| `src/feature_representation.py` | Builds the TF-IDF sparse matrix and pretrained dense sentence-transformer embeddings from the cleaned texts, then saves them to disk. |
+| File                                      | Description                                                                                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/data/collect_data.py`                | Queries the arXiv Atom API in batches and serializes raw paper metadata to `data/arxiv_corpus.jsonl`.                                       |
+| `src/data/preprocess.py`                  | Cleans and tokenizes abstracts (LaTeX removal, stopwords, Unicode normalization) and produces the cleaned corpus and sentence chunks.        |
+| `src/features/feature_representation.py` | Builds the TF-IDF sparse matrix and dense embeddings from the cleaned texts, then saves them to disk.                                       |
+| `src/features/dense_encoder.py`           | Unified encoder supporting MiniLM (sentence-transformers), SPECTER2 (adapter-based), and SciBERT (mean-pooling) backends.                   |
 
 ### Config & entry point
 
-| File                  | Description                                                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `configs/config.yaml` | Central configuration for all pipeline stages (API params, preprocessing options, embedding model, visualization settings). |
-| `run_part1.py`        | Orchestrator script that runs collect → preprocess → feature representation in sequence.                                    |
+| File                    | Description                                                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `configs/config.yaml`   | Central configuration for all pipeline stages (API params, preprocessing options, embedding model, visualization settings). |
+| `run_data_pipeline.py`  | Orchestrator script that runs collect → preprocess → feature representation in sequence.                                    |
 
 ### Data files (`data/`)
 
@@ -42,13 +43,17 @@ python run_part1.py --demo   # synthetic corpus, simulated embeddings
 | `arxiv_corpus_cleaned.jsonl`  | **Cleaned corpus** — same 20,000 papers as above plus two new fields: `cleaned_text` (preprocessed abstract string) and `tokens` (list of tokens after stopword removal).                                    |
 | `arxiv_chunks.jsonl`          | **Sentence chunks** — 40,477 overlapping chunks (≤128 tokens, 32-token overlap) derived from the cleaned abstracts; fields: `chunk_id`, `paper_id`, `chunk_type`, `chunk_text`, `chunk_index`, `tokens_est`. |
 | `tfidf_matrix.npz`            | **TF-IDF features** — scipy sparse matrix of shape `(20000, 50000)`; rows = papers, columns = unigram/bigram vocabulary; load with `scipy.sparse.load_npz`.                                                  |
-| `dense_embeddings.npy`        | **Dense embeddings** — numpy float32 array of shape `(20000, d)`; L2-normalized pretrained sentence-transformer embeddings, one row per paper in the same order as the JSONL files; load with `numpy.load`.   |
-| `corpus_stats.json`           | Summary statistics of the raw corpus (total papers, category distribution, year range, average abstract length).                                                                                             |
+| `dense_embeddings.npy`              | **Dense embeddings (MiniLM)** — numpy float32 array of shape `(20000, 384)`; L2-normalized MiniLM embeddings; load with `numpy.load`.                           |
+| `dense_embeddings_meta.json`        | Metadata for the MiniLM artifact (model name, dimension, creation info).                                                                                        |
+| `dense_embeddings_specter2_meta.json` | Metadata for the SPECTER2 artifact (model name, dimension=768, adapter names, creation timestamp). The corresponding `dense_embeddings_specter2.npy` is generated by running `run_data_pipeline.py`. |
+| `faiss_index.bin`                   | FAISS index built over the MiniLM dense embeddings for approximate nearest-neighbour search.                                                                    |
+| `tfidf_vectorizer.pkl`              | Fitted `TfidfVectorizer` object; needed to encode new queries at inference time.                                                                                |
+| `corpus_stats.json`                 | Summary statistics of the raw corpus (total papers, category distribution, year range, average abstract length).                                                |
 | `preprocessing_stats.json`    | Statistics from the preprocessing step (token counts before/after cleaning, chunk counts, token reduction %).                                                                                                |
 | `preprocessing_examples.json` | A small set of before/after preprocessing examples for sanity-checking the text cleaning pipeline.                                                                                                           |
 | `feature_comparison.json`     | Side-by-side comparison of TF-IDF vs. dense representations (dimensionality, sparsity %, storage size in MB).                                                                                                |
 
-> **For downstream stages:** The primary inputs you will need are `arxiv_corpus_cleaned.jsonl` (text + metadata), `arxiv_chunks.jsonl` (retrieval chunks), `dense_embeddings.npy` (dense retrieval), and `tfidf_matrix.npz` (sparse retrieval). Row order in `.npy`/`.npz` matches line order in `arxiv_corpus_cleaned.jsonl`.
+> **For downstream stages:** The primary inputs you will need are `arxiv_corpus_cleaned.jsonl` (text + metadata), `arxiv_chunks.jsonl` (retrieval chunks), `dense_embeddings.npy` (MiniLM dense retrieval), `tfidf_matrix.npz` (sparse retrieval), and `tfidf_vectorizer.pkl` (query encoding). Stage 3 defaults to SPECTER2 — run `run_data_pipeline.py` to generate `dense_embeddings_specter2.npy` before running Stage 3 with `--dense-model allenai/specter2_base`. Row order in `.npy`/`.npz` matches line order in `arxiv_corpus_cleaned.jsonl`.
 
 ---
 
@@ -69,21 +74,22 @@ This stage builds a **paper-level retrieval pipeline** on top of the Part 1 arti
 
 ### Source files added for Stage 2
 
-| File                    | Description                                                                                                  |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `src/part2_utils.py`    | Shared helpers for loading config, JSONL files, TF-IDF artifacts, dense embeddings, and score normalization. |
-| `src/retrieval.py`      | Implements paper-level TF-IDF, dense, and hybrid retrieval.                                                  |
-| `src/evaluate.py`       | Evaluates retrieval outputs with Precision@K, Recall@K, NDCG@10, and MAP.                                   |
-| `src/bootstrap_queries.py` | Creates a starter `data/labeled_queries.jsonl` file with paper-level query templates.                    |
-| `src/labeling_helper.py` | Prints candidate papers plus abstract snippets to help manual query labeling.                               |
-| `src/split_queries.py`  | Splits labeled queries into `queries_train.jsonl`, `queries_val.jsonl`, and `queries_test.jsonl`.           |
-| `run_part2.py`          | Convenience runner for bootstrapping queries, splitting labels, and launching evaluation.                    |
+| File                             | Description                                                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `src/utils/helpers.py`           | Shared helpers for loading config, JSONL files, TF-IDF artifacts, dense embeddings, and score normalization. |
+| `src/retrieval/retrieval.py`     | Implements paper-level TF-IDF, dense, and hybrid retrieval.                                                  |
+| `src/retrieval/evaluate.py`      | Evaluates retrieval outputs with Precision@K, Recall@K, NDCG@10, and MAP.                                   |
+| `src/utils/bootstrap_queries.py` | Creates a starter `data/labeled_queries.jsonl` file with paper-level query templates.                       |
+| `src/utils/labeling_helper.py`   | Prints candidate papers plus abstract snippets to help manual query labeling.                                |
+| `src/utils/split_queries.py`     | Splits labeled queries into `queries_train.jsonl`, `queries_val.jsonl`, and `queries_test.jsonl`.            |
+| `src/data/label_with_llm.py`     | Pools retrieval candidates and uses the UM-hosted LLM to judge relevance for benchmark labeling.             |
+| `run_retrieval.py`               | Convenience runner for bootstrapping queries, splitting labels, and launching evaluation.                    |
 
 ### Additional data files used in Stage 2
 
 | File                  | Description                                                                                      |
 | --------------------- | ------------------------------------------------------------------------------------------------ |
-| `labeled_queries.jsonl` | Paper-level benchmark queries with fields `query_id`, `query_text`, and `relevant_arxiv_ids`. |
+| `labeled_queries.jsonl` | Paper-level benchmark queries with fields `query_id`, `query_text`, `relevant_arxiv_ids`, `notes` (LLM-judging metadata), and `seed_titles`. |
 | `queries_train.jsonl` | 60% train split of labeled queries.                                                              |
 | `queries_val.jsonl`   | 20% validation split used for tuning.                                                            |
 | `queries_test.jsonl`  | 20% held-out test split used for final reporting.                                                |
@@ -93,37 +99,37 @@ This stage builds a **paper-level retrieval pipeline** on top of the Part 1 arti
 Create starter queries:
 
 ```bash
-python3 run_part2.py --bootstrap-queries
+python3 run_retrieval.py --bootstrap-queries
 ```
 
 Inspect likely relevant papers for a query and manually fill `relevant_arxiv_ids`:
 
 ```bash
-python3 -m src.labeling_helper --query "retrieval augmented generation" --k 10
+python3 -m src.utils.labeling_helper --query "retrieval augmented generation" --k 10
 ```
 
 Split labeled queries into train / validation / test:
 
 ```bash
-python3 run_part2.py --split-queries
+python3 run_retrieval.py --split-queries
 ```
 
 Run TF-IDF retrieval for a single query:
 
 ```bash
-python3 -m src.retrieval --mode tfidf --query "retrieval augmented generation" --k 5
+python3 -m src.retrieval.retrieval --mode tfidf --query "retrieval augmented generation" --k 5
 ```
 
 Evaluate all three methods on the validation split:
 
 ```bash
-python3 -m src.evaluate --queries data/queries_val.jsonl --top-k 5 --alpha 0.5 --dense-candidates 100
+python3 -m src.retrieval.evaluate --queries data/queries_val.jsonl --top-k 5 --alpha 0.5 --dense-candidates 100
 ```
 
 Evaluate on the held-out test split after tuning:
 
 ```bash
-python3 -m src.evaluate --queries data/queries_test.jsonl --top-k 5 --alpha 0.5 --dense-candidates 100
+python3 -m src.retrieval.evaluate --queries data/queries_test.jsonl --top-k 5 --alpha 0.5 --dense-candidates 100
 ```
 
 ### Notes on dense retrieval
@@ -132,11 +138,11 @@ python3 -m src.evaluate --queries data/queries_test.jsonl --top-k 5 --alpha 0.5 
 - Dense artifacts are now model-specific:
   - `allenai/specter2_base` -> `data/dense_embeddings_specter2.npy`, `data/dense_embeddings_specter2_meta.json`
   - `sentence-transformers/all-MiniLM-L6-v2` -> legacy `data/dense_embeddings.npy`, `data/dense_embeddings_meta.json`
-- Use `--dense-model` with `src.retrieval`, `src.evaluate`, or `run_part2.py` to switch between SPECTER2 and MiniLM for ablations.
-- To regenerate dense artifacts and metadata, rerun Part 1:
+- Use `--dense-model` with `src.retrieval.retrieval`, `src.retrieval.evaluate`, or `run_retrieval.py` to switch between SPECTER2 and MiniLM for ablations.
+- To regenerate dense artifacts and metadata, rerun the data pipeline:
 
 ```bash
-python3 run_part1.py
+python3 run_data_pipeline.py
 ```
 
 ### Evaluation protocol
@@ -188,30 +194,30 @@ For the report, document:
 
 | File | Description |
 | :--- | :--- |
-| `src/retrieval_extended.py` | Extends the Part 2 retriever with vector-based search and model-specific dense artifact loading (SPECTER2 by default). |
-| `src/feedback_logic.py` | Implements Rocchio updates and approximate facet-weight scaling on dense query vectors. |
-| `src/llm_refinement.py` | Calls the UM-hosted OpenAI-compatible endpoint to rewrite queries and return facet weights from feedback text. |
-| `src/qa_engine.py` | Orchestrates grounded answer generation with inline citations over retrieved abstracts. |
-| `run_part3.py` | Main entrypoint for interactive retrieval, relevance feedback, optional PRF, and grounded QA. |
+| `src/retrieval/retrieval_extended.py` | Extends the Stage 2 retriever with vector-based search and model-specific dense artifact loading (SPECTER2 by default). |
+| `src/feedback/feedback_logic.py`      | Implements Rocchio updates and approximate facet-weight scaling on dense query vectors. |
+| `src/feedback/llm_refinement.py`      | Calls the UM-hosted OpenAI-compatible endpoint to rewrite queries and return facet weights from feedback text. |
+| `src/rag/qa_engine.py`                | Orchestrates grounded answer generation with inline citations over retrieved abstracts. |
+| `run_feedback.py`                     | Main entrypoint for interactive retrieval, relevance feedback, optional PRF, and grounded QA. |
 
 ### Step-by-Step Usage
 
 Run one round of Rocchio feedback with grounded answer generation:
 
 ```bash
-python run_part3.py --queries data/queries_val.jsonl --rounds 1 --feedback-method rocchio
+python run_feedback.py --queries data/queries_val.jsonl --rounds 1 --feedback-method rocchio
 ```
 
 Run one round of LLM-based reflective refinement with pseudo-feedback and no QA call:
 
 ```bash
-python run_part3.py --queries data/queries_val.jsonl --rounds 1 --feedback-method llm --use_pseudo --skip-rag
+python run_feedback.py --queries data/queries_val.jsonl --rounds 1 --feedback-method llm --use_pseudo --skip-rag
 ```
 
 Run the combined method on the SPECTER2 artifacts:
 
 ```bash
-python run_part3.py --queries data/queries_val.jsonl --rounds 1 --feedback-method combined --dense-model allenai/specter2_base
+python run_feedback.py --queries data/queries_val.jsonl --rounds 1 --feedback-method combined --dense-model allenai/specter2_base
 ```
 
 Useful flags:
