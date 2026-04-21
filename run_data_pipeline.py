@@ -1,8 +1,8 @@
 """
 Usage:
-    python run_part1.py                    # Full pipeline (requires API + GPU)
-    python run_part1.py --demo             # Synthetic corpus, simulated embeddings
-    python run_part1.py --demo --skip-dense  # Minimal run (no embeddings)
+    python run_data_pipeline.py                    # Full pipeline (requires API + GPU)
+    python run_data_pipeline.py --demo             # Synthetic corpus, simulated embeddings
+    python run_data_pipeline.py --demo --skip-dense  # Minimal run (no embeddings)
 """
 
 import argparse

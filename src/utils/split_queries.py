@@ -2,11 +2,13 @@ import argparse
 import random
 from pathlib import Path
 
-from src.part2_utils import load_jsonl, save_jsonl
+from src.utils.helpers import load_jsonl, save_jsonl
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Split labeled queries into train/val/test")
+    parser = argparse.ArgumentParser(
+        description="Split labeled queries into train/val/test"
+    )
     parser.add_argument("--input", default="data/labeled_queries.jsonl")
     parser.add_argument("--output-dir", default="data")
     parser.add_argument("--seed", type=int, default=42)
@@ -15,7 +17,7 @@ def main():
     input_path = Path(args.input)
     if not input_path.exists():
         print(f"Query file not found: {input_path}")
-        print("Create it first with: python3 run_part2.py --bootstrap-queries")
+        print("Create it first with: python3 run_retrieval.py --bootstrap-queries")
         return
 
     rows = load_jsonl(input_path)
@@ -34,8 +36,8 @@ def main():
     n_train = int(0.6 * n_total)
     n_val = int(0.2 * n_total)
     train_rows = rows[:n_train]
-    val_rows = rows[n_train:n_train + n_val]
-    test_rows = rows[n_train + n_val:]
+    val_rows = rows[n_train : n_train + n_val]
+    test_rows = rows[n_train + n_val :]
 
     output_dir = Path(args.output_dir)
     save_jsonl(output_dir / "queries_train.jsonl", train_rows)

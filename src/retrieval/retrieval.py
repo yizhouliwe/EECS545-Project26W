@@ -4,8 +4,8 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from src.dense_encoder import DenseEncoder
-from src.part2_utils import (
+from src.features.dense_encoder import DenseEncoder
+from src.utils.helpers import (
     build_paper_lookup,
     dense_embedding_filename,
     dense_embedding_metadata_filename,
@@ -35,10 +35,16 @@ class PaperRetriever:
         self.paper_ids = [paper["paper_id"] for paper in self.papers]
         self.vectorizer, self.tfidf_matrix = load_tfidf_artifacts(data_dir)
         self.dense_model_name = dense_model_name or cfg["embeddings"]["dense_model"]
-        self.dense_embeddings_path = data_dir / dense_embedding_filename(self.dense_model_name)
-        self.dense_metadata_path = data_dir / dense_embedding_metadata_filename(self.dense_model_name)
+        self.dense_embeddings_path = data_dir / dense_embedding_filename(
+            self.dense_model_name
+        )
+        self.dense_metadata_path = data_dir / dense_embedding_metadata_filename(
+            self.dense_model_name
+        )
         self.dense_embeddings = load_dense_embeddings(data_dir, self.dense_model_name)
-        self.dense_metadata = load_dense_embedding_metadata(data_dir, self.dense_model_name)
+        self.dense_metadata = load_dense_embedding_metadata(
+            data_dir, self.dense_model_name
+        )
         self._dense_encoder = None
 
     def _load_dense_encoder(self):
@@ -48,8 +54,12 @@ class PaperRetriever:
         self._dense_encoder = DenseEncoder(
             model_name=self.dense_model_name,
             max_length=self.cfg["embeddings"]["dense_max_length"],
-            document_adapter=self.dense_metadata.get("document_adapter") if self.dense_metadata else None,
-            query_adapter=self.dense_metadata.get("query_adapter") if self.dense_metadata else None,
+            document_adapter=self.dense_metadata.get("document_adapter")
+            if self.dense_metadata
+            else None,
+            query_adapter=self.dense_metadata.get("query_adapter")
+            if self.dense_metadata
+            else None,
         )
         self._dense_encoder.load()
         return self._dense_encoder
@@ -58,7 +68,7 @@ class PaperRetriever:
         if self.dense_metadata is None:
             raise RuntimeError(
                 f"Missing {self.dense_metadata_path}. Regenerate dense embeddings with "
-                "`python3 run_part1.py` so retrieval can verify compatibility."
+                "`python3 run_data_pipeline.py` so retrieval can verify compatibility."
             )
         if self.dense_metadata.get("simulated"):
             raise RuntimeError(
@@ -74,7 +84,9 @@ class PaperRetriever:
                 "Regenerate embeddings or update the config so they match."
             )
         stored_dim = self.dense_metadata.get("embedding_dim")
-        if stored_dim is not None and int(stored_dim) != int(self.dense_embeddings.shape[1]):
+        if stored_dim is not None and int(stored_dim) != int(
+            self.dense_embeddings.shape[1]
+        ):
             raise RuntimeError(
                 f"Dense embedding metadata mismatch: metadata dim={stored_dim}, "
                 f"array dim={self.dense_embeddings.shape[1]}."
@@ -122,7 +134,9 @@ class PaperRetriever:
         candidate_idx = np.argsort(dense_scores)[::-1][:dense_candidates]
 
         sparse_query = self.vectorizer.transform([query])
-        sparse_scores = (self.tfidf_matrix[candidate_idx] @ sparse_query.T).toarray().ravel()
+        sparse_scores = (
+            (self.tfidf_matrix[candidate_idx] @ sparse_query.T).toarray().ravel()
+        )
 
         dense_norm = normalize_scores(dense_scores[candidate_idx])
         sparse_norm = normalize_scores(sparse_scores)
@@ -133,7 +147,9 @@ class PaperRetriever:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Paper-level retrieval over the arXiv corpus")
+    parser = argparse.ArgumentParser(
+        description="Paper-level retrieval over the arXiv corpus"
+    )
     parser.add_argument("--query", required=True, help="Search query text")
     parser.add_argument("--mode", choices=["tfidf", "dense", "hybrid"], default="tfidf")
     parser.add_argument("--k", type=int, default=5)
@@ -147,7 +163,9 @@ def main():
     )
     args = parser.parse_args()
 
-    retriever = PaperRetriever(config_path=args.config, dense_model_name=args.dense_model)
+    retriever = PaperRetriever(
+        config_path=args.config, dense_model_name=args.dense_model
+    )
     if args.mode == "tfidf":
         results = retriever.retrieve_tfidf(args.query, k=args.k)
     elif args.mode == "dense":

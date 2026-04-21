@@ -48,7 +48,7 @@ def main():
             eval_args.extend(["--dense-model", args.dense_model])
         run_step(
             "Evaluate TF-IDF, dense, and hybrid retrieval",
-            "src.evaluate",
+            "src.retrieval.evaluate",
             eval_args,
         )
 

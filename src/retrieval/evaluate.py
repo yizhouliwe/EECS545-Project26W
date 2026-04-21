@@ -4,8 +4,8 @@ from typing import Dict, List, Sequence
 
 import numpy as np
 
-from src.part2_utils import load_jsonl
-from src.retrieval import PaperRetriever
+from src.utils.helpers import load_jsonl
+from src.retrieval.retrieval import PaperRetriever
 
 
 def get_relevant_ids(query: dict) -> List[str]:
@@ -16,7 +16,9 @@ def get_relevant_ids(query: dict) -> List[str]:
     return []
 
 
-def precision_at_k(predictions: Sequence[str], relevant: Sequence[str], k: int) -> float:
+def precision_at_k(
+    predictions: Sequence[str], relevant: Sequence[str], k: int
+) -> float:
     top_k = predictions[:k]
     if not top_k:
         return 0.0
@@ -28,7 +30,9 @@ def recall_at_k(predictions: Sequence[str], relevant: Sequence[str], k: int) -> 
     if not relevant:
         return 0.0
     relevant_set = set(relevant)
-    return sum(1 for item in predictions[:k] if item in relevant_set) / len(relevant_set)
+    return sum(1 for item in predictions[:k] if item in relevant_set) / len(
+        relevant_set
+    )
 
 
 def average_precision(predictions: Sequence[str], relevant: Sequence[str]) -> float:
@@ -46,7 +50,10 @@ def average_precision(predictions: Sequence[str], relevant: Sequence[str]) -> fl
 
 def ndcg_at_k(predictions: Sequence[str], relevant: Sequence[str], k: int) -> float:
     relevant_set = set(relevant)
-    gains = np.array([1.0 if item in relevant_set else 0.0 for item in predictions[:k]], dtype=np.float32)
+    gains = np.array(
+        [1.0 if item in relevant_set else 0.0 for item in predictions[:k]],
+        dtype=np.float32,
+    )
     if gains.size == 0:
         return 0.0
     discounts = 1.0 / np.log2(np.arange(2, gains.size + 2))
@@ -105,7 +112,9 @@ def run_method(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate paper-level retrieval methods")
+    parser = argparse.ArgumentParser(
+        description="Evaluate paper-level retrieval methods"
+    )
     parser.add_argument("--queries", default="data/queries_val.jsonl")
     parser.add_argument("--config", default="configs/config.yaml")
     parser.add_argument("--top-k", type=int, default=10)
@@ -115,7 +124,9 @@ def main():
     args = parser.parse_args()
 
     query_rows = load_jsonl(Path(args.queries))
-    retriever = PaperRetriever(config_path=args.config, dense_model_name=args.dense_model)
+    retriever = PaperRetriever(
+        config_path=args.config, dense_model_name=args.dense_model
+    )
 
     print(f"Evaluating {len(query_rows)} labeled queries from {args.queries}\n")
     for mode in ["tfidf", "dense", "hybrid"]:

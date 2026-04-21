@@ -5,8 +5,8 @@ from typing import List, Optional
 
 import numpy as np
 
-from src.dense_encoder import DenseEncoder
-from src.part2_utils import (
+from src.features.dense_encoder import DenseEncoder
+from src.utils.helpers import (
     build_paper_lookup,
     dense_embedding_filename,
     dense_embedding_metadata_filename,
@@ -33,14 +33,22 @@ class PaperRetrieverExtended:
         self.papers = load_papers(str(corpus_path))
         self.paper_lookup = build_paper_lookup(self.papers)
         self.paper_ids = [paper["paper_id"] for paper in self.papers]
-        self.paper_id_to_index = {paper_id: idx for idx, paper_id in enumerate(self.paper_ids)}
+        self.paper_id_to_index = {
+            paper_id: idx for idx, paper_id in enumerate(self.paper_ids)
+        }
 
         # Stage 3 defaults to the scientific-domain SPECTER2 encoder.
         self.dense_model_name = dense_model_name or "allenai/specter2_base"
-        self.dense_embeddings_path = data_dir / dense_embedding_filename(self.dense_model_name)
-        self.dense_metadata_path = data_dir / dense_embedding_metadata_filename(self.dense_model_name)
+        self.dense_embeddings_path = data_dir / dense_embedding_filename(
+            self.dense_model_name
+        )
+        self.dense_metadata_path = data_dir / dense_embedding_metadata_filename(
+            self.dense_model_name
+        )
         self.dense_embeddings = load_dense_embeddings(data_dir, self.dense_model_name)
-        self.dense_metadata = load_dense_embedding_metadata(data_dir, self.dense_model_name)
+        self.dense_metadata = load_dense_embedding_metadata(
+            data_dir, self.dense_model_name
+        )
         self._dense_encoder = None
 
     def _load_dense_encoder(self):
@@ -50,8 +58,12 @@ class PaperRetrieverExtended:
         self._dense_encoder = DenseEncoder(
             model_name=self.dense_model_name,
             max_length=self.cfg["embeddings"]["dense_max_length"],
-            document_adapter=self.dense_metadata.get("document_adapter") if self.dense_metadata else None,
-            query_adapter=self.dense_metadata.get("query_adapter") if self.dense_metadata else None,
+            document_adapter=self.dense_metadata.get("document_adapter")
+            if self.dense_metadata
+            else None,
+            query_adapter=self.dense_metadata.get("query_adapter")
+            if self.dense_metadata
+            else None,
         )
         self._dense_encoder.load()
         return self._dense_encoder
@@ -69,7 +81,9 @@ class PaperRetrieverExtended:
                 f"but Stage 3 expects `{self.dense_model_name}`."
             )
         stored_dim = self.dense_metadata.get("embedding_dim")
-        if stored_dim is not None and int(stored_dim) != int(self.dense_embeddings.shape[1]):
+        if stored_dim is not None and int(stored_dim) != int(
+            self.dense_embeddings.shape[1]
+        ):
             raise RuntimeError(
                 f"Dense embedding metadata mismatch: metadata dim={stored_dim}, "
                 f"array dim={self.dense_embeddings.shape[1]}."
