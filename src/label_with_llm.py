@@ -3,6 +3,7 @@ Pool candidates from TF-IDF, Dense, and Hybrid retrieval for each query,
 then use GPT-oss-120B to judge relevance and update labeled_queries.jsonl.
 Requires UM VPN.
 """
+
 import argparse
 import json
 import time
@@ -10,7 +11,7 @@ from pathlib import Path
 
 from openai import OpenAI
 
-from src.part2_utils import load_config, load_papers
+from src.utils import load_config, load_papers
 from src.retrieval import PaperRetriever
 
 
@@ -37,7 +38,9 @@ def judge_relevance(query: str, title: str, abstract: str) -> bool:
         )
         content = response.choices[0].message.content
         if content is None:
-            print(f"    LLM returned None. Finish reason: {response.choices[0].finish_reason}")
+            print(
+                f"    LLM returned None. Finish reason: {response.choices[0].finish_reason}"
+            )
             return False
         answer = content.strip().upper()
         return answer.startswith("YES")
@@ -70,7 +73,9 @@ def main():
     parser.add_argument("--queries", default="data/labeled_queries.jsonl")
     parser.add_argument("--output", default="data/labeled_queries.jsonl")
     parser.add_argument("--top-k", type=int, default=50)
-    parser.add_argument("--delay", type=float, default=0.5, help="Seconds between LLM calls")
+    parser.add_argument(
+        "--delay", type=float, default=0.5, help="Seconds between LLM calls"
+    )
     args = parser.parse_args()
 
     retriever = PaperRetriever()
@@ -84,7 +89,10 @@ def main():
         qid = row["query_id"]
         query = row["query_text"]
 
-        if row.get("relevant_arxiv_ids") and row.get("notes", "unlabeled") != "unlabeled":
+        if (
+            row.get("relevant_arxiv_ids")
+            and row.get("notes", "unlabeled") != "unlabeled"
+        ):
             print(f"\n[{qid}] Skipping (already labeled: {row['notes']})")
             continue
 
@@ -105,7 +113,9 @@ def main():
             time.sleep(args.delay)
 
         row["relevant_arxiv_ids"] = relevant_ids
-        row["notes"] = f"LLM-judged: {len(relevant_ids)}/{len(candidates)} candidates relevant."
+        row["notes"] = (
+            f"LLM-judged: {len(relevant_ids)}/{len(candidates)} candidates relevant."
+        )
         print(f"  -> {len(relevant_ids)} relevant papers found")
 
     with open(args.output, "w") as f:

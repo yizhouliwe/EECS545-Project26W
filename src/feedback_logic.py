@@ -4,7 +4,7 @@ from typing import Sequence
 
 import numpy as np
 
-from src.part2_utils import l2_normalize
+from src.utils import l2_normalize
 
 
 def apply_rocchio(
@@ -18,9 +18,13 @@ def apply_rocchio(
     updated = alpha * np.asarray(query_vector, dtype=np.float32)
 
     if positive_vectors:
-        updated += beta * np.mean(np.asarray(positive_vectors, dtype=np.float32), axis=0)
+        updated += beta * np.mean(
+            np.asarray(positive_vectors, dtype=np.float32), axis=0
+        )
     if negative_vectors:
-        updated -= gamma * np.mean(np.asarray(negative_vectors, dtype=np.float32), axis=0)
+        updated -= gamma * np.mean(
+            np.asarray(negative_vectors, dtype=np.float32), axis=0
+        )
 
     return l2_normalize(updated)
 

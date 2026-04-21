@@ -10,7 +10,7 @@ import numpy as np
 import yaml
 
 from src.dense_encoder import DenseEncoder
-from src.part2_utils import (
+from src.utils import (
     dense_embedding_filename,
     dense_embedding_metadata_filename,
     dense_faiss_index_filename,
@@ -19,6 +19,7 @@ from src.part2_utils import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+
 def build_tfidf_features(
     cleaned_texts: List[str],
     max_features: int = 50000,
@@ -26,7 +27,9 @@ def build_tfidf_features(
 ) -> Tuple[object, object]:
     from sklearn.feature_extraction.text import TfidfVectorizer
 
-    logger.info(f"Building TF-IDF features (max_features={max_features}, ngram={ngram_range})")
+    logger.info(
+        f"Building TF-IDF features (max_features={max_features}, ngram={ngram_range})"
+    )
     vectorizer = TfidfVectorizer(
         max_features=max_features,
         ngram_range=ngram_range,
@@ -36,10 +39,13 @@ def build_tfidf_features(
         dtype=np.float32,
     )
     tfidf_matrix = vectorizer.fit_transform(cleaned_texts)
-    logger.info(f"TF-IDF matrix shape: {tfidf_matrix.shape}, "
-                f"vocab size: {len(vectorizer.vocabulary_)}, "
-                f"nnz: {tfidf_matrix.nnz}")
+    logger.info(
+        f"TF-IDF matrix shape: {tfidf_matrix.shape}, "
+        f"vocab size: {len(vectorizer.vocabulary_)}, "
+        f"nnz: {tfidf_matrix.nnz}"
+    )
     return vectorizer, tfidf_matrix
+
 
 def generate_dense_embeddings(
     texts: List[str],
@@ -55,7 +61,9 @@ def generate_dense_embeddings(
             max_length=max_length,
             device=device,
         )
-        logger.info(f"Generating embeddings for {len(texts)} texts (batch_size={batch_size})")
+        logger.info(
+            f"Generating embeddings for {len(texts)} texts (batch_size={batch_size})"
+        )
         embeddings = encoder.encode_documents(
             texts,
             batch_size=batch_size,
@@ -65,7 +73,9 @@ def generate_dense_embeddings(
         return embeddings
 
     except ImportError:
-        logger.warning("sentence-transformers not installed; using simulated embeddings.")
+        logger.warning(
+            "sentence-transformers not installed; using simulated embeddings."
+        )
         logger.warning("Install with:  pip install sentence-transformers")
         return generate_simulated_embeddings(texts, model_name)
 
@@ -103,6 +113,7 @@ def build_dense_input_texts(papers: List[dict], model_name: str) -> List[str]:
         return [f"{p['title']} [SEP] {p['abstract']}" for p in papers]
     return [f"{p['title']}. {p['abstract']}" for p in papers]
 
+
 def feature_comparison_table(
     tfidf_vectorizer,
     tfidf_matrix,
@@ -115,7 +126,11 @@ def feature_comparison_table(
                 "name": "TF-IDF (sparse)",
                 "dimensionality": tfidf_matrix.shape[1],
                 "vocab_size": len(tfidf_vectorizer.vocabulary_),
-                "sparsity_pct": 100 * (1 - tfidf_matrix.nnz / (tfidf_matrix.shape[0] * tfidf_matrix.shape[1])),
+                "sparsity_pct": 100
+                * (
+                    1
+                    - tfidf_matrix.nnz / (tfidf_matrix.shape[0] * tfidf_matrix.shape[1])
+                ),
                 "avg_nonzero_per_doc": tfidf_matrix.nnz / tfidf_matrix.shape[0],
                 "dtype": str(tfidf_matrix.dtype),
                 "storage_mb": tfidf_matrix.data.nbytes / 1e6,
@@ -145,17 +160,30 @@ def print_feature_table(table: dict):
     tfidf = table["representations"][0]
     dense = table["representations"][1]
     rows = [
-        ("Dimensionality", f"{tfidf['dimensionality']:,}", f"{dense['dimensionality']:,}"),
-        ("Vocabulary size", f"{tfidf['vocab_size']:,}", str(dense['vocab_size'])),
-        ("Sparsity (%)", f"{tfidf['sparsity_pct']:.2f}%", f"{dense['sparsity_pct']:.1f}%"),
-        ("Avg non-zero/doc", f"{tfidf['avg_nonzero_per_doc']:.0f}", f"{dense['avg_nonzero_per_doc']:,}"),
+        (
+            "Dimensionality",
+            f"{tfidf['dimensionality']:,}",
+            f"{dense['dimensionality']:,}",
+        ),
+        ("Vocabulary size", f"{tfidf['vocab_size']:,}", str(dense["vocab_size"])),
+        (
+            "Sparsity (%)",
+            f"{tfidf['sparsity_pct']:.2f}%",
+            f"{dense['sparsity_pct']:.1f}%",
+        ),
+        (
+            "Avg non-zero/doc",
+            f"{tfidf['avg_nonzero_per_doc']:.0f}",
+            f"{dense['avg_nonzero_per_doc']:,}",
+        ),
         ("Storage (MB)", f"{tfidf['storage_mb']:.1f}", f"{dense['storage_mb']:.1f}"),
-        ("dtype", tfidf['dtype'], dense['dtype']),
+        ("dtype", tfidf["dtype"], dense["dtype"]),
     ]
     for name, v1, v2 in rows:
         print(f"  {name:<30} {v1:>22} {v2:>22}")
     print(f"\n  Documents: {table['n_documents']:,}")
     print("=" * 80 + "\n")
+
 
 def reduce_dimensions(
     embeddings: np.ndarray,
@@ -169,6 +197,7 @@ def reduce_dimensions(
     """Reduce embedding dimensions for visualization."""
     if method == "tsne":
         from sklearn.manifold import TSNE
+
         logger.info(f"Running t-SNE (perplexity={perplexity})")
         reducer = TSNE(
             n_components=n_components,
@@ -182,7 +211,10 @@ def reduce_dimensions(
     elif method == "umap":
         try:
             import umap
-            logger.info(f"Running UMAP (n_neighbors={n_neighbors}, min_dist={min_dist})")
+
+            logger.info(
+                f"Running UMAP (n_neighbors={n_neighbors}, min_dist={min_dist})"
+            )
             reducer = umap.UMAP(
                 n_components=n_components,
                 n_neighbors=n_neighbors,
@@ -194,7 +226,10 @@ def reduce_dimensions(
         except ImportError:
             logger.warning("umap-learn not installed; falling back to t-SNE")
             return reduce_dimensions(
-                embeddings, "tsne", n_components, perplexity,
+                embeddings,
+                "tsne",
+                n_components,
+                perplexity,
                 random_state=random_state,
             )
     else:
@@ -208,6 +243,7 @@ def _get_colormap(name: str, n: int):
     """Get a colormap, compatible with both old and new matplotlib."""
     import matplotlib
     import matplotlib.pyplot as plt
+
     try:
         cmap = matplotlib.colormaps.get_cmap(name)
         if hasattr(cmap, "resampled"):
@@ -226,6 +262,7 @@ def create_embedding_visualization(
     title_suffix: str = "",
 ):
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from collections import Counter
@@ -244,15 +281,20 @@ def create_embedding_visualization(
     for cat in unique_cats:
         idxs = [i for i, c in enumerate(display_cats) if c == cat]
         ax.scatter(
-            coords[idxs, 0], coords[idxs, 1],
-            c=[color_map[cat]], label=f"{cat} ({cat_counts.get(cat, 0):,})",
-            s=8, alpha=0.5, edgecolors="none",
+            coords[idxs, 0],
+            coords[idxs, 1],
+            c=[color_map[cat]],
+            label=f"{cat} ({cat_counts.get(cat, 0):,})",
+            s=8,
+            alpha=0.5,
+            edgecolors="none",
         )
 
     method_label = "t-SNE" if method == "tsne" else "UMAP"
     ax.set_title(
         f"{method_label} Visualization of Paper Embeddings by arXiv Category{title_suffix}",
-        fontsize=13, fontweight="bold",
+        fontsize=13,
+        fontweight="bold",
     )
     ax.set_xlabel(f"{method_label} Dimension 1", fontsize=11)
     ax.set_ylabel(f"{method_label} Dimension 2", fontsize=11)
@@ -272,6 +314,7 @@ def create_preprocessing_examples_figure(
     dpi: int = 150,
 ):
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import textwrap
@@ -281,25 +324,41 @@ def create_preprocessing_examples_figure(
     if n == 1:
         axes = [axes]
 
-    fig.suptitle("Preprocessing: Before vs. After Examples",
-                 fontsize=14, fontweight="bold", y=1.02)
+    fig.suptitle(
+        "Preprocessing: Before vs. After Examples",
+        fontsize=14,
+        fontweight="bold",
+        y=1.02,
+    )
 
     for i, ex in enumerate(examples[:n]):
         ax_before = axes[i][0] if n > 1 else axes[0]
         before_text = textwrap.fill(ex["original_abstract"][:300] + "...", width=60)
         ax_before.text(
-            0.05, 0.95, before_text, transform=ax_before.transAxes,
-            fontsize=7, verticalalignment="top", fontfamily="monospace",
+            0.05,
+            0.95,
+            before_text,
+            transform=ax_before.transAxes,
+            fontsize=7,
+            verticalalignment="top",
+            fontfamily="monospace",
             bbox=dict(boxstyle="round,pad=0.3", facecolor="#fff3cd", alpha=0.8),
         )
-        ax_before.set_title(f"Original ({ex['num_original_tokens']} tokens)", fontsize=9)
+        ax_before.set_title(
+            f"Original ({ex['num_original_tokens']} tokens)", fontsize=9
+        )
         ax_before.axis("off")
 
         ax_after = axes[i][1] if n > 1 else axes[1]
         after_text = textwrap.fill(ex["cleaned_text"][:300] + "...", width=60)
         ax_after.text(
-            0.05, 0.95, after_text, transform=ax_after.transAxes,
-            fontsize=7, verticalalignment="top", fontfamily="monospace",
+            0.05,
+            0.95,
+            after_text,
+            transform=ax_after.transAxes,
+            fontsize=7,
+            verticalalignment="top",
+            fontfamily="monospace",
             bbox=dict(boxstyle="round,pad=0.3", facecolor="#d4edda", alpha=0.8),
         )
         ax_after.set_title(
@@ -313,6 +372,7 @@ def create_preprocessing_examples_figure(
     plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
     plt.close()
     logger.info(f"Preprocessing examples figure saved to {output_path}")
+
 
 def build_faiss_index(
     embeddings: np.ndarray,
@@ -329,7 +389,9 @@ def build_faiss_index(
 
         if use_ivf and embeddings.shape[0] > 10000:
             quantizer = faiss.IndexFlatIP(dim)
-            index = faiss.IndexIVFFlat(quantizer, dim, nlist, faiss.METRIC_INNER_PRODUCT)
+            index = faiss.IndexIVFFlat(
+                quantizer, dim, nlist, faiss.METRIC_INNER_PRODUCT
+            )
             index.train(embeddings_f32)
             index.add(embeddings_f32)
             logger.info(f"Built IVF-Flat index: {index.ntotal} vectors, nlist={nlist}")
@@ -347,13 +409,18 @@ def build_faiss_index(
         logger.warning("FAISS not installed; skipping index build.")
         return None
 
+
 def main():
     parser = argparse.ArgumentParser(description="Build feature representations")
     parser.add_argument("--config", default="configs/config.yaml")
-    parser.add_argument("--skip-dense", action="store_true",
-                        help="Skip dense embedding generation")
-    parser.add_argument("--simulated", action="store_true",
-                        help="Use simulated embeddings (no GPU needed)")
+    parser.add_argument(
+        "--skip-dense", action="store_true", help="Skip dense embedding generation"
+    )
+    parser.add_argument(
+        "--simulated",
+        action="store_true",
+        help="Use simulated embeddings (no GPU needed)",
+    )
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -384,6 +451,7 @@ def main():
     with open(data_dir / "tfidf_vectorizer.pkl", "wb") as f:
         pickle.dump(vectorizer, f)
     from scipy import sparse
+
     sparse.save_npz(str(data_dir / "tfidf_matrix.npz"), tfidf_matrix)
     logger.info("TF-IDF artifacts saved.")
 
@@ -402,7 +470,9 @@ def main():
             )
 
         embeddings_path = data_dir / dense_embedding_filename(emb_cfg["dense_model"])
-        metadata_path = data_dir / dense_embedding_metadata_filename(emb_cfg["dense_model"])
+        metadata_path = data_dir / dense_embedding_metadata_filename(
+            emb_cfg["dense_model"]
+        )
         faiss_path = data_dir / dense_faiss_index_filename(emb_cfg["dense_model"])
 
         np.save(str(embeddings_path), dense_embeddings)
@@ -413,18 +483,26 @@ def main():
             "simulated": simulated_mode,
             "embedding_dim": int(dense_embeddings.shape[1]),
             "n_documents": int(dense_embeddings.shape[0]),
-            "source_text": "title [SEP] abstract" if emb_cfg["dense_model"] == "allenai/specter2_base" else "title + abstract",
+            "source_text": "title [SEP] abstract"
+            if emb_cfg["dense_model"] == "allenai/specter2_base"
+            else "title + abstract",
             "created_at_utc": datetime.now(timezone.utc).isoformat(),
             "artifact_file": embeddings_path.name,
             "encoder_backend": (
                 "specter2_adapters"
-                if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode
+                if emb_cfg["dense_model"] == "allenai/specter2_base"
+                and not simulated_mode
                 else "hf_mean_pooling"
-                if emb_cfg["dense_model"] == "allenai/scibert_scivocab_uncased" and not simulated_mode
+                if emb_cfg["dense_model"] == "allenai/scibert_scivocab_uncased"
+                and not simulated_mode
                 else "sentence_transformers_or_simulated"
             ),
-            "document_adapter": "allenai/specter2" if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode else None,
-            "query_adapter": "allenai/specter2_adhoc_query" if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode else None,
+            "document_adapter": "allenai/specter2"
+            if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode
+            else None,
+            "query_adapter": "allenai/specter2_adhoc_query"
+            if emb_cfg["dense_model"] == "allenai/specter2_base" and not simulated_mode
+            else None,
         }
         with open(metadata_path, "w") as f:
             json.dump(dense_meta, f, indent=2)
@@ -463,7 +541,9 @@ def main():
 
         fig_dir = vis_cfg["output_dir"]
         create_embedding_visualization(
-            coords, sample_categories, vis_cfg["method"],
+            coords,
+            sample_categories,
+            vis_cfg["method"],
             output_path=f"{fig_dir}/embedding_visualization_{vis_cfg['method']}.png",
             dpi=vis_cfg["figure_dpi"],
         )
