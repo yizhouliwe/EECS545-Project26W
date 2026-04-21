@@ -1,11 +1,11 @@
 import argparse
 from pathlib import Path
 
-from src.feedback_logic import apply_facet_weights, apply_rocchio
-from src.llm_refinement import LLMRefinement
-from src.part2_utils import load_jsonl
-from src.qa_engine import QAGenerator
-from src.retrieval_extended import PaperRetrieverExtended
+from src.feedback.feedback_logic import apply_facet_weights, apply_rocchio
+from src.feedback.llm_refinement import LLMRefinement
+from src.utils.helpers import load_jsonl
+from src.rag.qa_engine import QAGenerator
+from src.retrieval.retrieval_extended import PaperRetrieverExtended
 
 
 def normalize_id(paper_id: str) -> str:
@@ -52,13 +52,17 @@ def apply_feedback_method(
     feedback_results: list[dict],
     feedback_text: str,
 ):
-    positive_vectors = [retriever.get_embedding(result["paper_id"]) for result in feedback_results]
+    positive_vectors = [
+        retriever.get_embedding(result["paper_id"]) for result in feedback_results
+    ]
 
     if feedback_method == "rocchio":
         return current_query, apply_rocchio(current_vector, positive_vectors), None
 
     if llm_refiner is None:
-        raise RuntimeError("LLM-based feedback requires an initialized LLMRefinement instance.")
+        raise RuntimeError(
+            "LLM-based feedback requires an initialized LLMRefinement instance."
+        )
 
     if feedback_method == "combined":
         rocchio_vector = apply_rocchio(current_vector, positive_vectors)
@@ -81,8 +85,14 @@ def main():
     parser = argparse.ArgumentParser(description="Part 3: Relevance Feedback & RAG")
     parser.add_argument("--queries", default="data/queries_val.jsonl")
     parser.add_argument("--rounds", type=int, choices=[0, 1, 2], default=1)
-    parser.add_argument("--top_k", type=int, default=5, help="Number of documents to retrieve")
-    parser.add_argument("--use_pseudo", action="store_true", help="Enable PRF if no ground truth hit is found")
+    parser.add_argument(
+        "--top_k", type=int, default=5, help="Number of documents to retrieve"
+    )
+    parser.add_argument(
+        "--use_pseudo",
+        action="store_true",
+        help="Enable PRF if no ground truth hit is found",
+    )
     parser.add_argument(
         "--feedback-method",
         choices=["rocchio", "llm", "combined"],
@@ -94,12 +104,14 @@ def main():
     args = parser.parse_args()
 
     retriever = PaperRetrieverExtended(dense_model_name=args.dense_model)
-    llm_refiner = LLMRefinement() if args.feedback_method in {"llm", "combined"} else None
+    llm_refiner = (
+        LLMRefinement() if args.feedback_method in {"llm", "combined"} else None
+    )
     qa_gen = None if args.skip_rag else QAGenerator()
 
     query_rows = load_jsonl(Path(args.queries))
     if args.max_queries is not None:
-        query_rows = query_rows[:args.max_queries]
+        query_rows = query_rows[: args.max_queries]
 
     print(
         f"Executing Part 3 evaluation on {len(query_rows)} queries "
@@ -120,9 +132,15 @@ def main():
         for round_idx in range(args.rounds + 1):
             results = retriever.retrieve_by_vector(current_vector, k=args.top_k)
             final_results = results
-            hits = [result for result in results if normalize_id(result["arxiv_id"]) in relevant_ids]
+            hits = [
+                result
+                for result in results
+                if normalize_id(result["arxiv_id"]) in relevant_ids
+            ]
             precision = len(hits) / max(args.top_k, 1)
-            print(f"Round {round_idx} | Precision@{args.top_k}: {precision:.2f} | Hits: {len(hits)}")
+            print(
+                f"Round {round_idx} | Precision@{args.top_k}: {precision:.2f} | Hits: {len(hits)}"
+            )
 
             if round_idx >= args.rounds:
                 continue
@@ -134,7 +152,9 @@ def main():
                 use_pseudo=args.use_pseudo,
             )
             if not feedback_results:
-                print("  --> No positive feedback available; stopping refinement early.")
+                print(
+                    "  --> No positive feedback available; stopping refinement early."
+                )
                 break
 
             if pseudo_used:
@@ -162,7 +182,9 @@ def main():
                 if refinement.explanation:
                     print(f"  --> LLM rationale: {refinement.explanation}")
             else:
-                print(f"  --> Rocchio updated the query vector using {len(feedback_results)} positives.")
+                print(
+                    f"  --> Rocchio updated the query vector using {len(feedback_results)} positives."
+                )
 
         if qa_gen is None:
             continue
