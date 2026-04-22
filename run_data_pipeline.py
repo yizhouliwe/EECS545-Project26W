@@ -42,15 +42,15 @@ def main():
     args = parser.parse_args()
 
     step1_args = ["--demo"] if args.demo else []
-    run_step("Data Collection", "src.collect_data", step1_args)
+    run_step("Data Collection", "src.data.collect_data", step1_args)
 
-    run_step("Preprocessing", "src.preprocess")
+    run_step("Preprocessing", "src.data.preprocess")
     step3_args = []
     if args.skip_dense:
         step3_args.append("--skip-dense")
     if args.simulated or args.demo:
         step3_args.append("--simulated")
-    run_step("Feature Representation", "src.feature_representation", step3_args)
+    run_step("Feature Representation", "src.features.feature_representation", step3_args)
 
     data_dir = Path("data")
     print(f"\n{'='*70}")

@@ -84,6 +84,73 @@ def apply_feedback_method(
     return refinement.rewritten_query, refined_vector, refinement
 
 
+def select_papers_for_budget(results: list[dict], token_budget: int) -> list[dict]:
+    selected = []
+    used_tokens = 0
+    for result in results:
+        paper_tokens = int(result.get("tokens_est", len(result.get("abstract", "").split())))
+        if selected and used_tokens + paper_tokens > token_budget:
+            continue
+        selected.append(result)
+        used_tokens += paper_tokens
+        if used_tokens >= token_budget:
+            break
+    return selected
+
+
+def build_rag_results(
+    args,
+    retriever: PaperRetrieverExtended,
+    current_vector,
+    final_results: list[dict],
+) -> list[dict]:
+    if args.context_mode == "chunk":
+        return retriever.retrieve_chunks(
+            query_vector=current_vector,
+            paper_ids=[result["paper_id"] for result in final_results],
+            top_m=args.chunk_top_m,
+            token_budget=args.chunk_token_budget,
+        )
+    return select_papers_for_budget(final_results, token_budget=args.chunk_token_budget)
+
+
+def evaluate_context_results(
+    rag_results: list[dict],
+    relevant_ids_norm: set[str],
+) -> dict:
+    if not rag_results:
+        return {
+            "context_items": 0,
+            "context_unique_papers": 0,
+            "context_tokens": 0,
+            "context_precision": 0.0,
+            "context_recall": 0.0,
+        }
+
+    evidence_hits = 0
+    unique_paper_ids = []
+    seen = set()
+    for item in rag_results:
+        norm_id = normalize_id(item["arxiv_id"])
+        if norm_id in relevant_ids_norm:
+            evidence_hits += 1
+        if norm_id not in seen:
+            seen.add(norm_id)
+            unique_paper_ids.append(norm_id)
+
+    unique_relevant_hits = sum(1 for paper_id in unique_paper_ids if paper_id in relevant_ids_norm)
+    total_tokens = sum(int(item.get("tokens_est", 0)) for item in rag_results)
+    return {
+        "context_items": len(rag_results),
+        "context_unique_papers": len(unique_paper_ids),
+        "context_tokens": total_tokens,
+        "context_precision": evidence_hits / len(rag_results),
+        "context_recall": (
+            unique_relevant_hits / len(relevant_ids_norm) if relevant_ids_norm else 0.0
+        ),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Part 3: Relevance Feedback & RAG")
     parser.add_argument("--queries", default="data/queries_val.jsonl")
@@ -102,6 +169,24 @@ def main():
         default="rocchio",
     )
     parser.add_argument("--dense-model", default=None)
+    parser.add_argument(
+        "--context-mode",
+        choices=["paper", "chunk"],
+        default="paper",
+        help="Use full paper abstracts or selected chunks as the final RAG context.",
+    )
+    parser.add_argument(
+        "--chunk-top-m",
+        type=int,
+        default=8,
+        help="Maximum number of chunks to pass to RAG when --context-mode chunk.",
+    )
+    parser.add_argument(
+        "--chunk-token-budget",
+        type=int,
+        default=3000,
+        help="Approximate total token budget for the final RAG context.",
+    )
     parser.add_argument("--skip-rag", action="store_true")
     parser.add_argument("--max-queries", type=int, default=None)
     parser.add_argument("--output-csv", default=None, help="Path to write per-round metrics CSV")
@@ -208,11 +293,48 @@ def main():
                     f"  --> Rocchio updated the query vector using {len(feedback_results)} positives."
                 )
 
+        rag_results = build_rag_results(
+            args=args,
+            retriever=retriever,
+            current_vector=current_vector,
+            final_results=final_results,
+        )
+        context_metrics = evaluate_context_results(rag_results, relevant_ids_norm)
+        records.append({
+            "query_id": row.get("query_id", query_text[:40]),
+            "round": "context",
+            "precision": context_metrics["context_precision"],
+            "recall": context_metrics["context_recall"],
+            "ndcg": "",
+            "map": "",
+            "context_items": context_metrics["context_items"],
+            "context_unique_papers": context_metrics["context_unique_papers"],
+            "context_tokens": context_metrics["context_tokens"],
+        })
+        print(
+            "[Context] "
+            f"items={context_metrics['context_items']} | "
+            f"unique_papers={context_metrics['context_unique_papers']} | "
+            f"tokens~{context_metrics['context_tokens']} | "
+            f"precision={context_metrics['context_precision']:.3f} | "
+            f"recall={context_metrics['context_recall']:.3f}"
+        )
+
         if qa_gen is None:
             continue
 
         print("\n[RAG] Generating answer via UM GPT-oss-120B...")
-        context = qa_gen.format_context(final_results)
+        if args.context_mode == "chunk":
+            print(
+                f"[RAG] Selected {len(rag_results)} chunks "
+                f"(budget={args.chunk_token_budget}, top_m={args.chunk_top_m})."
+            )
+        else:
+            print(
+                f"[RAG] Selected {len(rag_results)} papers "
+                f"(budget={args.chunk_token_budget})."
+            )
+        context = qa_gen.format_context(rag_results)
         try:
             answer = qa_gen.generate_answer(current_query, context)
             print(f"\n[AI Answer]:\n{answer}\n")
@@ -220,7 +342,9 @@ def main():
             print(f"\n[RAG] Skipped: {exc}\n")
 
     by_round = collections.defaultdict(lambda: collections.defaultdict(list))
-    for rec in records:
+    context_records = [rec for rec in records if rec["round"] == "context"]
+    metric_records = [rec for rec in records if rec["round"] != "context"]
+    for rec in metric_records:
         for metric in ("precision", "recall", "ndcg", "map"):
             by_round[rec["round"]][metric].append(rec[metric])
 
@@ -240,10 +364,37 @@ def main():
             )
         print(f"{'=' * 70}\n")
 
+    if context_records:
+        print(f"\n{'=' * 70}")
+        print(f"  CONTEXT SUMMARY ({args.context_mode})")
+        print(f"  {'Items':>8} {'Unique':>8} {'Tokens':>10} {'Prec':>8} {'Recall':>8}")
+        print(f"  {'-'*46}")
+        print(
+            f"  {sum(rec['context_items'] for rec in context_records)/len(context_records):>8.2f} "
+            f"{sum(rec['context_unique_papers'] for rec in context_records)/len(context_records):>8.2f} "
+            f"{sum(rec['context_tokens'] for rec in context_records)/len(context_records):>10.1f} "
+            f"{sum(rec['precision'] for rec in context_records)/len(context_records):>8.3f} "
+            f"{sum(rec['recall'] for rec in context_records)/len(context_records):>8.3f}"
+        )
+        print(f"{'=' * 70}\n")
+
     if args.output_csv and records:
         csv_path = Path(args.output_csv)
         with open(csv_path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=["query_id", "round", "precision", "recall", "ndcg", "map"])
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "query_id",
+                    "round",
+                    "precision",
+                    "recall",
+                    "ndcg",
+                    "map",
+                    "context_items",
+                    "context_unique_papers",
+                    "context_tokens",
+                ],
+            )
             writer.writeheader()
             writer.writerows(records)
         print(f"Metrics written to {csv_path}")
