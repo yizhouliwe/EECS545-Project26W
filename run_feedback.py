@@ -1,10 +1,13 @@
 import argparse
+import collections
+import csv
 from pathlib import Path
 
 from src.feedback.feedback_logic import apply_facet_weights, apply_rocchio
 from src.feedback.llm_refinement import LLMRefinement
 from src.utils.helpers import load_jsonl
 from src.rag.qa_engine import QAGenerator
+from src.retrieval.evaluate import average_precision, ndcg_at_k, precision_at_k, recall_at_k
 from src.retrieval.retrieval_extended import PaperRetrieverExtended
 
 
@@ -101,6 +104,7 @@ def main():
     parser.add_argument("--dense-model", default=None)
     parser.add_argument("--skip-rag", action="store_true")
     parser.add_argument("--max-queries", type=int, default=None)
+    parser.add_argument("--output-csv", default=None, help="Path to write per-round metrics CSV")
     args = parser.parse_args()
 
     retriever = PaperRetrieverExtended(dense_model_name=args.dense_model)
@@ -118,9 +122,11 @@ def main():
         f"(feedback_method={args.feedback_method}, rounds={args.rounds})..."
     )
 
+    records = []
+
     for row in query_rows:
         query_text = row["query_text"]
-        relevant_ids = {normalize_id(idx) for idx in row.get("relevant_arxiv_ids", [])}
+        relevant_ids_norm = {normalize_id(idx) for idx in row.get("relevant_arxiv_ids", [])}
         current_query = query_text
         current_vector = retriever.encode_query(current_query)
         final_results = []
@@ -132,15 +138,31 @@ def main():
         for round_idx in range(args.rounds + 1):
             results = retriever.retrieve_by_vector(current_vector, k=args.top_k)
             final_results = results
-            hits = [
-                result
-                for result in results
-                if normalize_id(result["arxiv_id"]) in relevant_ids
-            ]
-            precision = len(hits) / max(args.top_k, 1)
+            predicted_ids = [normalize_id(r["arxiv_id"]) for r in results]
+            relevant_ids_list = list(relevant_ids_norm)
+            hits = [r for r in results if normalize_id(r["arxiv_id"]) in relevant_ids_norm]
+
+            p = precision_at_k(predicted_ids, relevant_ids_list, args.top_k)
+            r = recall_at_k(predicted_ids, relevant_ids_list, args.top_k)
+            n = ndcg_at_k(predicted_ids, relevant_ids_list, min(10, args.top_k))
+            m = average_precision(predicted_ids, relevant_ids_list)
+
             print(
-                f"Round {round_idx} | Precision@{args.top_k}: {precision:.2f} | Hits: {len(hits)}"
+                f"Round {round_idx} | "
+                f"P@{args.top_k}: {p:.3f} | "
+                f"R@{args.top_k}: {r:.3f} | "
+                f"NDCG@10: {n:.3f} | "
+                f"MAP: {m:.3f} | "
+                f"Hits: {len(hits)}"
             )
+            records.append({
+                "query_id": row.get("query_id", query_text[:40]),
+                "round": round_idx,
+                "precision": p,
+                "recall": r,
+                "ndcg": n,
+                "map": m,
+            })
 
             if round_idx >= args.rounds:
                 continue
@@ -196,6 +218,35 @@ def main():
             print(f"\n[AI Answer]:\n{answer}\n")
         except Exception as exc:
             print(f"\n[RAG] Skipped: {exc}\n")
+
+    by_round = collections.defaultdict(lambda: collections.defaultdict(list))
+    for rec in records:
+        for metric in ("precision", "recall", "ndcg", "map"):
+            by_round[rec["round"]][metric].append(rec[metric])
+
+    if by_round:
+        print(f"\n{'=' * 70}")
+        print(f"  SUMMARY (feedback_method={args.feedback_method})")
+        print(f"  {'Round':<8} {'P@K':>8} {'R@K':>8} {'NDCG@10':>10} {'MAP':>8}")
+        print(f"  {'-'*44}")
+        for rnd in sorted(by_round):
+            vals = by_round[rnd]
+            print(
+                f"  {rnd:<8} "
+                f"{sum(vals['precision'])/len(vals['precision']):>8.3f} "
+                f"{sum(vals['recall'])/len(vals['recall']):>8.3f} "
+                f"{sum(vals['ndcg'])/len(vals['ndcg']):>10.3f} "
+                f"{sum(vals['map'])/len(vals['map']):>8.3f}"
+            )
+        print(f"{'=' * 70}\n")
+
+    if args.output_csv and records:
+        csv_path = Path(args.output_csv)
+        with open(csv_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["query_id", "round", "precision", "recall", "ndcg", "map"])
+            writer.writeheader()
+            writer.writerows(records)
+        print(f"Metrics written to {csv_path}")
 
 
 if __name__ == "__main__":
