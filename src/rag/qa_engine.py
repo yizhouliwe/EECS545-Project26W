@@ -23,12 +23,15 @@ class QAGenerator:
 
     def format_context(self, results: list[dict]) -> str:
         sections = []
-        for idx, paper in enumerate(results, start=1):
-            abstract = paper["abstract"].replace("\n", " ").strip()
+        for idx, item in enumerate(results, start=1):
+            evidence_text = item.get("evidence_text") or item.get("abstract", "")
+            evidence_text = evidence_text.replace("\n", " ").strip()
+            context_type = item.get("context_type", "paper")
+            label = "Snippet" if context_type == "chunk" else "Abstract"
             sections.append(
-                f"[{idx}] {paper['title']}\n"
-                f"ArXiv ID: {paper['arxiv_id']}\n"
-                f"Abstract: {abstract}\n"
+                f"[{idx}] {item['title']}\n"
+                f"ArXiv ID: {item['arxiv_id']}\n"
+                f"{label}: {evidence_text}\n"
             )
         return "\n".join(sections)
 
@@ -40,7 +43,7 @@ class QAGenerator:
             )
 
         prompt = (
-            "Answer the user's research question using only the provided paper snippets.\n"
+            "Answer the user's research question using only the provided paper evidence.\n"
             "When making a claim, cite the supporting snippet index like [1] or [2].\n"
             "If the context is insufficient, say so plainly.\n\n"
             f"Question: {question}\n\n"

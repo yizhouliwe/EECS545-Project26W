@@ -55,7 +55,15 @@ def generate_dense_embeddings(
     device: Optional[str] = None,
 ) -> np.ndarray:
     try:
+        if device is None:
+            try:
+                import torch
+
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+            except ImportError:
+                device = None
         logger.info(f"Loading model: {model_name}")
+        logger.info("Dense encoder device: %s", device or "default")
         encoder = DenseEncoder(
             model_name=model_name,
             max_length=max_length,
