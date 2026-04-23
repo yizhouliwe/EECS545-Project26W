@@ -80,6 +80,20 @@ def run_rocchio_feedback(retriever, query_rows, top_k, rounds):
     return records
 
 
+def run_chunk_retrieval(retriever, query_rows, top_k):
+    records = []
+    for row in query_rows:
+        query_vector = retriever.encode_query(row["query_text"])
+        paper_results = retriever.retrieve_by_vector(query_vector, k=top_k)
+        paper_ids = [r["paper_id"] for r in paper_results]
+        chunk_results = retriever.retrieve_chunks(query_vector, paper_ids, top_m=top_k)
+        predicted_ids = [normalize_id(r["arxiv_id"]) for r in chunk_results]
+        relevant_ids = [normalize_id(i) for i in row.get("relevant_arxiv_ids", [])]
+        metrics = compute_metrics(predicted_ids, relevant_ids, top_k)
+        records.append({"method": "chunk", "round": 0, "query_id": row.get("query_id", ""), **metrics})
+    return records
+
+
 def summarize(records):
     by_method_round = collections.defaultdict(lambda: collections.defaultdict(list))
     for rec in records:
@@ -126,14 +140,16 @@ def main():
 
     if not args.skip_retrieval:
         print("\n[Retrieval] TF-IDF / Dense / Hybrid")
-        retriever2 = PaperRetriever(dense_model_name=args.dense_model)
-        records += run_retrieval_methods(retriever2, query_rows, args.top_k, args.alpha, args.dense_candidates)
+        paper_retriever = PaperRetriever(dense_model_name=args.dense_model)
+        records += run_retrieval_methods(paper_retriever, query_rows, args.top_k, args.alpha, args.dense_candidates)
 
     if not args.skip_feedback:
         print("\n[Feedback] Rocchio relevance feedback")
         dense_model = args.dense_model or "sentence-transformers/all-MiniLM-L6-v2"
-        retriever3 = PaperRetrieverExtended(dense_model_name=dense_model)
-        records += run_rocchio_feedback(retriever3, query_rows, args.top_k, args.rounds)
+        dense_retriever = PaperRetrieverExtended(dense_model_name=dense_model)
+        records += run_rocchio_feedback(dense_retriever, query_rows, args.top_k, args.rounds)
+        print("\n[Chunk] Chunk-level evidence retrieval")
+        records += run_chunk_retrieval(dense_retriever, query_rows, args.top_k)
 
     summarize(records)
 
