@@ -56,6 +56,11 @@ def dense_embedding_metadata_filename(model_name: str | None = None) -> str:
     return "dense_embeddings_meta.json"
 
 
+def chunk_embedding_filename(model_name: str) -> str:
+    slug = model_name.replace("/", "_").replace("-", "_")
+    return f"chunk_embeddings_{slug}.npy"
+
+
 def dense_faiss_index_filename(model_name: str | None = None) -> str:
     suffix = dense_artifact_suffix(model_name)
     if suffix:

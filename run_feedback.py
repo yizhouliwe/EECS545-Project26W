@@ -247,6 +247,9 @@ def main():
                 "recall": r,
                 "ndcg": n,
                 "map": m,
+                "context_items": None,
+                "context_unique_papers": None,
+                "context_tokens": None,
             })
 
             if round_idx >= args.rounds:
@@ -305,8 +308,8 @@ def main():
             "round": "context",
             "precision": context_metrics["context_precision"],
             "recall": context_metrics["context_recall"],
-            "ndcg": "",
-            "map": "",
+            "ndcg": None,
+            "map": None,
             "context_items": context_metrics["context_items"],
             "context_unique_papers": context_metrics["context_unique_papers"],
             "context_tokens": context_metrics["context_tokens"],
