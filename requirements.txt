@@ -3,8 +3,10 @@ scipy
 scikit-learn
 sentence-transformers
 transformers
+adapters
 torch
 openai
 pyyaml
 umap-learn
 faiss-cpu
+matplotlib
