@@ -3,13 +3,11 @@ import collections
 import csv
 from pathlib import Path
 
-import numpy as np
-
 from src.feedback.feedback_logic import apply_facet_weights, apply_rocchio
 from src.feedback.llm_refinement import LLMRefinement
+from src.retrieval.dense_retriever import DenseRetriever
 from src.retrieval.evaluate import average_precision, ndcg_at_k, precision_at_k, recall_at_k
 from src.retrieval.retrieval import PaperRetriever
-from src.retrieval.retrieval_extended import PaperRetrieverExtended
 from src.utils.helpers import load_jsonl
 
 
@@ -199,7 +197,7 @@ def main():
     if not args.skip_feedback:
         print("\n[Feedback] Rocchio relevance feedback")
         dense_model = args.dense_model or "sentence-transformers/all-MiniLM-L6-v2"
-        dense_retriever = PaperRetrieverExtended(dense_model_name=dense_model)
+        dense_retriever = DenseRetriever(dense_model_name=dense_model)
         records += run_rocchio_feedback(dense_retriever, query_rows, args.top_k, args.rounds)
         print("\n[Chunk] Chunk-level evidence retrieval")
         records += run_chunk_retrieval(dense_retriever, query_rows, args.top_k)

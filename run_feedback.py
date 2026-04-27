@@ -8,7 +8,7 @@ from src.feedback.llm_refinement import LLMRefinement
 from src.utils.helpers import load_jsonl
 from src.rag.qa_engine import QAGenerator
 from src.retrieval.evaluate import average_precision, ndcg_at_k, precision_at_k, recall_at_k
-from src.retrieval.retrieval_extended import PaperRetrieverExtended
+from src.retrieval.dense_retriever import DenseRetriever
 
 
 def normalize_id(paper_id: str) -> str:
@@ -46,7 +46,7 @@ def build_feedback(
 
 def apply_feedback_method(
     feedback_method: str,
-    retriever: PaperRetrieverExtended,
+    retriever: DenseRetriever,
     llm_refiner: LLMRefinement | None,
     original_query: str,
     current_query: str,
@@ -100,7 +100,7 @@ def select_papers_for_budget(results: list[dict], token_budget: int) -> list[dic
 
 def build_rag_results(
     args,
-    retriever: PaperRetrieverExtended,
+    retriever: DenseRetriever,
     current_vector,
     final_results: list[dict],
 ) -> list[dict]:
@@ -192,7 +192,7 @@ def main():
     parser.add_argument("--output-csv", default=None, help="Path to write per-round metrics CSV")
     args = parser.parse_args()
 
-    retriever = PaperRetrieverExtended(dense_model_name=args.dense_model)
+    retriever = DenseRetriever(dense_model_name=args.dense_model)
     llm_refiner = (
         LLMRefinement() if args.feedback_method in {"llm", "combined"} else None
     )

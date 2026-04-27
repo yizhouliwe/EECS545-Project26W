@@ -122,7 +122,7 @@ class ChunkRetriever:
         return selected
 
 
-class PaperRetrieverExtended:
+class DenseRetriever:
     def __init__(
         self,
         config_path: str = "configs/config.yaml",
