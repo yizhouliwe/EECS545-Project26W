@@ -5,7 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
-from src.feedback.feedback_logic import apply_rocchio
+from src.feedback.feedback_logic import apply_facet_weights, apply_rocchio
+from src.feedback.llm_refinement import LLMRefinement
 from src.retrieval.evaluate import average_precision, ndcg_at_k, precision_at_k, recall_at_k
 from src.retrieval.retrieval import PaperRetriever
 from src.retrieval.retrieval_extended import PaperRetrieverExtended
@@ -80,6 +81,57 @@ def run_rocchio_feedback(retriever, query_rows, top_k, rounds):
     return records
 
 
+def run_llm_feedback(retriever, query_rows, top_k, rounds, feedback_method):
+    llm_refiner = LLMRefinement()
+    records = []
+    for row in query_rows:
+        relevant_ids_norm = {normalize_id(i) for i in row.get("relevant_arxiv_ids", [])}
+        relevant_ids_list = list(relevant_ids_norm)
+        original_query = row["query_text"]
+        current_query = original_query
+        current_vector = retriever.encode_query(current_query)
+
+        for round_idx in range(rounds + 1):
+            results = retriever.retrieve_by_vector(current_vector, k=top_k)
+            predicted_ids = [normalize_id(r["arxiv_id"]) for r in results]
+            metrics = compute_metrics(predicted_ids, relevant_ids_list, top_k)
+            records.append({
+                "method": feedback_method,
+                "round": round_idx,
+                "query_id": row.get("query_id", ""),
+                **metrics,
+            })
+
+            if round_idx >= rounds:
+                break
+
+            hits = [r for r in results if normalize_id(r["arxiv_id"]) in relevant_ids_norm]
+            if not hits:
+                hits = [results[0]] if results else []
+            if not hits:
+                break
+
+            positive_vectors = [retriever.get_embedding(r["paper_id"]) for r in hits]
+            feedback_text = "These papers are relevant. Find more like: " + "; ".join(r["title"] for r in hits[:3])
+
+            if feedback_method == "combined":
+                rocchio_vector = apply_rocchio(current_vector, positive_vectors)
+                seed_results = retriever.retrieve_by_vector(rocchio_vector, k=top_k)
+            else:
+                seed_results = results
+
+            refinement = llm_refiner.refine_query(
+                original_query=original_query,
+                current_query=current_query,
+                retrieved_titles=[r["title"] for r in seed_results],
+                user_feedback_text=feedback_text,
+            )
+            current_query = refinement.rewritten_query
+            current_vector = apply_facet_weights(retriever.encode_query(current_query), refinement.facet_weights)
+
+    return records
+
+
 def run_chunk_retrieval(retriever, query_rows, top_k):
     records = []
     for row in query_rows:
@@ -127,6 +179,7 @@ def main():
     parser.add_argument("--rounds", type=int, choices=[0, 1, 2], default=2)
     parser.add_argument("--skip-retrieval", action="store_true")
     parser.add_argument("--skip-feedback", action="store_true")
+    parser.add_argument("--include-llm", action="store_true", help="Also run LLM and Combined feedback (requires API key)")
     parser.add_argument("--output-csv", default=None)
     parser.add_argument("--max-queries", type=int, default=None)
     args = parser.parse_args()
@@ -150,6 +203,11 @@ def main():
         records += run_rocchio_feedback(dense_retriever, query_rows, args.top_k, args.rounds)
         print("\n[Chunk] Chunk-level evidence retrieval")
         records += run_chunk_retrieval(dense_retriever, query_rows, args.top_k)
+
+    if args.include_llm:
+        for method in ["llm", "combined"]:
+            print(f"\n[Feedback] {method.upper()} relevance feedback")
+            records += run_llm_feedback(dense_retriever, query_rows, args.top_k, args.rounds, method)
 
     summarize(records)
 

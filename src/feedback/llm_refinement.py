@@ -89,7 +89,7 @@ class LLMRefinement:
         response = self._client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=300,
+            max_tokens=512,
             temperature=0.0,
         )
         content = response.choices[0].message.content or ""
