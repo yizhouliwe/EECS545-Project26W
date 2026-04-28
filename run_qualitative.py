@@ -10,8 +10,6 @@ Usage:
     python run_qualitative.py --query-id q098 --umap --pca
 """
 
-from __future__ import annotations
-
 import argparse
 from pathlib import Path
 

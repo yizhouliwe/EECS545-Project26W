@@ -429,12 +429,19 @@ def main():
         action="store_true",
         help="Use simulated embeddings (no GPU needed)",
     )
+    parser.add_argument(
+        "--dense-model",
+        default=None,
+        help="Override the dense model from config (e.g. allenai/specter2_base)",
+    )
     args = parser.parse_args()
 
     with open(args.config) as f:
         cfg = yaml.safe_load(f)
 
     emb_cfg = cfg["embeddings"]
+    if args.dense_model:
+        emb_cfg["dense_model"] = args.dense_model
     vis_cfg = cfg["visualization"]
     data_dir = Path(cfg["data_collection"]["output_path"]).parent
     data_dir.mkdir(parents=True, exist_ok=True)
