@@ -24,7 +24,8 @@ preprocessing:
   chunk_overlap_tokens: 32
 
 embeddings:
-  dense_model: "allenai/specter2_base" # scientific-domain dense encoder; MiniLM artifacts remain available for ablations
+  # dense_model: "allenai/specter2_base" # scientific-domain dense encoder; MiniLM artifacts remain available for ablations
+  dense_model: "sentence-transformers/all-MiniLM-L6-v2" # the chosen model; performs better after testing
   dense_batch_size: 64
   dense_max_length: 512
   tfidf_max_features: 50000

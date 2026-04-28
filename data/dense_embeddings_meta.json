@@ -4,6 +4,8 @@
   "embedding_dim": 384,
   "n_documents": 20000,
   "source_text": "title + abstract",
+  "created_at_utc": "2026-04-28T01:24:39.682027+00:00",
+  "artifact_file": "dense_embeddings.npy",
   "encoder_backend": "sentence_transformers_or_simulated",
   "document_adapter": null,
   "query_adapter": null
