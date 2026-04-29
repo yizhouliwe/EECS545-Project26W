@@ -198,9 +198,36 @@ For the report, document:
 | `src/feedback/feedback_logic.py`      | Implements Rocchio updates and approximate facet-weight scaling on dense query vectors. |
 | `src/feedback/llm_refinement.py`      | Calls the UM-hosted OpenAI-compatible endpoint to rewrite queries and return facet weights from feedback text. |
 | `src/rag/qa_engine.py`                | Orchestrates grounded answer generation with inline citations over retrieved abstracts. |
-| `run_feedback.py`                     | Main entrypoint for interactive retrieval, relevance feedback, optional PRF, and grounded QA. |
+| `src/evaluation/ragas_eval.py`        | RAGAS-based reference-free evaluator (Faithfulness, AnswerRelevancy) using sentence-transformer embeddings and the UM-hosted LLM. |
+| `run_feedback.py`                     | Batch entrypoint for automated retrieval, relevance feedback, optional PRF, and grounded QA over a query file. |
+| `run_interactive.py`                  | Human-in-the-loop CLI: enter a query, browse retrieved papers, mark relevant ones, apply feedback, and receive a grounded answer with inline citations. |
+| `run_ragas.py`                        | Evaluates RAG answer quality across configurations using RAGAS reference-free metrics; outputs a summary table and CSV. |
 
-### Step-by-Step Usage
+### Interactive CLI Usage
+
+Start the interactive feedback loop (artifact check runs automatically on first launch):
+
+```bash
+python run_interactive.py
+```
+
+Choose a feedback method and number of rounds:
+
+```bash
+python run_interactive.py --method rocchio --rounds 2 --top-k 10
+python run_interactive.py --method llm --rounds 1
+python run_interactive.py --method combined --rounds 2
+```
+
+Skip final answer generation and show paper listings only:
+
+```bash
+python run_interactive.py --no-answer
+```
+
+At each round, type paper numbers (e.g. `1 3 5`) to mark relevant results, press Enter to use pseudo-relevance (top result), or `q` to quit. After the final round a grounded answer is generated with inline citations and a numbered source list.
+
+### Batch Feedback Usage (`run_feedback.py`)
 
 Run one round of Rocchio feedback with grounded answer generation:
 
@@ -229,7 +256,38 @@ Useful flags:
 - `--max-queries N` limits evaluation to the first `N` queries for quick smoke tests.
 - `--dense-model MODEL_NAME` switches between dense artifact sets, including `sentence-transformers/all-MiniLM-L6-v2` and `allenai/specter2_base`.
 
-For the UM-hosted LLM endpoints, set:
+### RAGAS Evaluation
+
+Evaluates RAG answer quality with two reference-free metrics:
+
+- **Faithfulness** — fraction of answer claims grounded in the retrieved context.
+- **Answer Relevancy** — how well the answer addresses the original question.
+
+Run a single configuration:
+
+```bash
+python run_ragas.py --context-mode chunk --feedback-method none
+python run_ragas.py --context-mode chunk --feedback-method rocchio --rounds 1
+```
+
+Run all four key configurations and write a combined CSV:
+
+```bash
+python run_ragas.py --all-configs --output-csv outputs/ragas_results.csv
+```
+
+#### RAGAS results (test split, N=21 queries)
+
+| Config | Faithfulness | Answer Relevancy |
+| ------ | ------------ | ---------------- |
+| paper + no feedback | 0.548 | 0.741 |
+| chunk + no feedback | 0.550 | 0.719 |
+| chunk + Rocchio (1 round) | 0.572 | 0.721 |
+| chunk + LLM refinement (1 round) | 0.645 | 0.655 |
+
+Faithfulness improves with feedback, peaking with LLM refinement (+0.10 over baseline). LLM refinement trades some answer relevancy for higher grounding — the rewritten query drifts slightly from the original phrasing, producing more faithful but narrower answers.
+
+### Environment variables for UM-hosted LLM endpoints
 
 ```bash
 export UM_GPTOSS_BASE_URL=http://<host>:8000/v1
