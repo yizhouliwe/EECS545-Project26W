@@ -52,7 +52,7 @@ class QAGenerator:
         response = self._client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=600,
+            max_tokens=1000,
             temperature=0.1,
         )
         return (response.choices[0].message.content or "").strip()

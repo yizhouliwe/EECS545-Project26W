@@ -9,14 +9,17 @@ Usage:
     python run_interactive.py --method rocchio --top-k 10 --rounds 3
     python run_interactive.py --method llm
     python run_interactive.py --method combined
+    python run_interactive.py --no-answer   # paper listings only, no answer generation
 """
 
 import argparse
 import sys
+import textwrap
 from pathlib import Path
 
 from src.feedback.feedback_logic import apply_facet_weights, apply_rocchio
 from src.feedback.llm_refinement import LLMRefinement
+from src.rag.qa_engine import QAGenerator
 from src.retrieval.dense_retriever import DenseRetriever
 from src.utils.helpers import dense_embedding_filename
 
@@ -83,6 +86,30 @@ def display_results(results: list[dict], round_idx: int) -> None:
     print(f"{'─' * 70}")
 
 
+def display_answer(qa_gen: QAGenerator, query: str, results: list[dict]) -> None:
+    print(f"\n{'─' * 70}")
+    print("  Generating answer…")
+    context_str = qa_gen.format_context(results)
+    try:
+        answer = qa_gen.generate_answer(query, context_str)
+    except Exception as exc:
+        print(f"  Answer generation failed: {exc}")
+        return
+    print(f"\n{'═' * 70}")
+    print("  Answer")
+    print(f"{'═' * 70}")
+    for line in textwrap.wrap(answer, width=68):
+        print(f"  {line}")
+    print()
+    print("  Retrieved papers (answer cites by number):")
+    for i, r in enumerate(results, 1):
+        print(f"    [{i}] {r['title']}")
+        arxiv_id = r.get("arxiv_id", "")
+        if arxiv_id:
+            print(f"         https://arxiv.org/abs/{arxiv_id}")
+    print(f"{'═' * 70}")
+
+
 def parse_selections(raw: str, max_idx: int) -> list[int]:
     selections = []
     for token in raw.strip().split():
@@ -102,6 +129,7 @@ def run_interactive(
     rounds: int,
     top_k: int,
     llm_refiner: LLMRefinement | None,
+    qa_gen: QAGenerator | None = None,
 ) -> None:
     current_query = query
     current_vector = retriever.encode_query(current_query)
@@ -111,7 +139,9 @@ def run_interactive(
         display_results(results, round_idx)
 
         if round_idx >= rounds:
-            print("\nMax rounds reached. Done.")
+            print("\nMax rounds reached.")
+            if qa_gen is not None:
+                display_answer(qa_gen, query, results)
             break
 
         raw = input(
@@ -177,12 +207,17 @@ def main() -> None:
     parser.add_argument(
         "--dense-model", default="sentence-transformers/all-MiniLM-L6-v2"
     )
+    parser.add_argument(
+        "--no-answer", action="store_true",
+        help="Skip final answer generation and only show paper listings",
+    )
     args = parser.parse_args()
     check_artifacts(args.dense_model)
 
     print(f"\nLoading retriever ({args.dense_model})...")
     retriever = DenseRetriever(dense_model_name=args.dense_model)
     llm_refiner = LLMRefinement() if args.method in ("llm", "combined") else None
+    qa_gen = None if args.no_answer else QAGenerator()
 
     print(
         f"Method: {args.method}  |  Top-K: {args.top_k}  |  Max rounds: {args.rounds}"
@@ -192,7 +227,7 @@ def main() -> None:
         print("No query entered. Exiting.")
         return
 
-    run_interactive(retriever, query, args.method, args.rounds, args.top_k, llm_refiner)
+    run_interactive(retriever, query, args.method, args.rounds, args.top_k, llm_refiner, qa_gen)
 
 
 if __name__ == "__main__":
