@@ -10,3 +10,6 @@ pyyaml
 umap-learn
 faiss-cpu
 matplotlib
+ragas
+langchain-openai
+datasets
