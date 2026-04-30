@@ -4,7 +4,7 @@
 
 This stage builds the full document corpus and its feature representations that later stages (retrieval, ranking, evaluation) will consume. Concretely it:
 
-1. **Collects** 20,000 arXiv papers (cs.AI, cs.CL, cs.LG, cs.IR, cs.CV; 2024–2026) via the arXiv API.
+1. **Collects** 20,000 arXiv papers (cs.AI, cs.CL, cs.LG, cs.IR, cs.CV; 2020–2026) via the arXiv API.
 2. **Preprocesses** each abstract — Unicode normalization, LaTeX stripping, stopword removal, lowercasing, tokenization — and splits every abstract into overlapping sentence-level chunks (≤128 tokens, 32-token overlap).
 3. **Builds two feature representations** for all papers: a sparse TF-IDF matrix (50 k-dim unigram/bigram) and dense L2-normalized pretrained sentence-transformer embeddings.
 
@@ -68,7 +68,7 @@ This stage builds a **paper-level retrieval pipeline** on top of the Part 1 arti
 ### Stage 2 workflow
 
 1. **Create a labeled query set** in `data/labeled_queries.jsonl`.
-2. **Split queries** into train / validation / test using a 60% / 20% / 20% hold-out CV protocol.
+2. **Split queries** into train / validation / test using a hold-out protocol (59 / 19 / 21 queries).
 3. **Run retrieval** in `tfidf`, `dense`, or `hybrid` mode.
 4. **Evaluate** Precision@K, Recall@K, NDCG@10, and MAP on validation or test queries.
 
@@ -148,36 +148,11 @@ python3 run_data_pipeline.py
 ### Evaluation protocol
 
 - **Retrieval unit:** paper-level
-- **Cross-validation setup:** hold-out CV with 60% train / 20% validation / 20% test
+- **Cross-validation setup:** hold-out CV with 59 train / 19 validation / 21 test queries
 - **Tuning split:** validation
 - **Final reporting split:** test
 - **Methods compared:** TF-IDF, Dense, Hybrid
 - **Metrics:** Precision@K, Recall@K, NDCG@10, MAP
-
-### Current validation results
-
-Using the current validation split (`data/queries_val.jsonl`) with `top-k=10` and `dense-candidates=100`, the current paper-level results are:
-
-| Method | Precision@10 | Recall@10 | NDCG@10 | MAP |
-| ------ | ------------ | --------- | ------- | --- |
-| TF-IDF | 0.4421 | 0.1957 | 0.4452 | 0.1131 |
-| Dense (MiniLM) | 0.5105 | 0.2334 | 0.5275 | 0.1498 |
-| Hybrid (MiniLM) | 0.5263 | 0.2441 | 0.5515 | 0.1642 |
-| Dense (SPECTER2) | 0.3474 | 0.1739 | 0.3781 | 0.1069 |
-| Hybrid (SPECTER2) | 0.4526 | 0.2222 | 0.5012 | 0.1538 |
-
-On the current 19-query validation split, **MiniLM remains the strongest dense encoder in this repo**, while **SPECTER2 is now fully supported as an ablation-ready scientific-domain alternative** with separate artifacts and metadata. Hybrid reranking still outperforms dense-only retrieval for both encoders.
-
-### Reporting guidance for Part 2
-
-For the report, document:
-
-1. The three-stage pipeline: dense candidate generation -> hybrid reranking -> top-N selection.
-2. The hold-out query split and which split was used for tuning.
-3. The hyperparameters used: embedding model, top-K, dense candidate pool, hybrid weight `alpha`.
-4. A results table comparing `TF-IDF`, `Dense`, and `Hybrid`.
-5. A comparison plot across the reported metrics.
-
 
 ## Stage 3 — Interactive Feedback & Retrieval-Augmented Generation (RAG)
 ### Stage 3 Workflow
@@ -275,17 +250,6 @@ Run all four key configurations and write a combined CSV:
 ```bash
 python run_ragas.py --all-configs --output-csv outputs/ragas_results.csv
 ```
-
-#### RAGAS results (test split, N=21 queries)
-
-| Config | Faithfulness | Answer Relevancy |
-| ------ | ------------ | ---------------- |
-| paper + no feedback | 0.548 | 0.741 |
-| chunk + no feedback | 0.550 | 0.719 |
-| chunk + Rocchio (1 round) | 0.572 | 0.721 |
-| chunk + LLM refinement (1 round) | 0.645 | 0.655 |
-
-Faithfulness improves with feedback, peaking with LLM refinement (+0.10 over baseline). LLM refinement trades some answer relevancy for higher grounding — the rewritten query drifts slightly from the original phrasing, producing more faithful but narrower answers.
 
 ### Environment variables for UM-hosted LLM endpoints
 
